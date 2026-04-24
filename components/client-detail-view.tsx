@@ -1,0 +1,165 @@
+import { ArrowLeft, Mail, MapPin, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { getClienteById, type ClienteEstado } from "@/lib/mock-data";
+
+const statusAccent: Record<ClienteEstado, string> = {
+  "Clientes nuevos": "bg-kpi-green",
+  Contactados: "bg-kpi-beige",
+  "Negociación": "bg-kpi-orange",
+  "Trato cerrado": "bg-kpi-grey",
+};
+
+function Field({
+  label,
+  value,
+  grow,
+}: {
+  label: string;
+  value: string | number;
+  grow?: boolean;
+}) {
+  return (
+    <div className={cn("space-y-3", grow && "md:col-span-2 xl:col-span-3")}>
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+        {label}
+      </p>
+      <div className="rounded-2xl border border-border/80 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+export function ClientDetailView({ id }: { id: string }) {
+  const cliente = getClienteById(id);
+
+  if (!cliente) {
+    notFound();
+  }
+
+  return (
+    <div className="flex min-h-full flex-col overflow-auto pr-1">
+      <div className="flex justify-end">
+        <Link href="/dashboard">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-2 border-border px-3 text-sm font-medium text-figma-table hover:bg-muted"
+          >
+            <ArrowLeft className="size-3.5" />
+            Volver al listado
+          </Button>
+        </Link>
+      </div>
+
+      <div className="mt-6">
+        <div className="flex flex-col gap-4 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Ficha de cliente
+            </p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-figma-table md:text-3xl">
+              {cliente.nombre}
+            </h1>
+            <p className="max-w-2xl text-sm leading-relaxed text-figma-placeholder">
+              Resumen del lead, contexto comercial y últimos puntos de contacto.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Badge
+              className="gap-2 rounded-full border border-border/70 bg-figma-shell/70 px-3 py-1.5 text-figma-table"
+              variant="outline"
+            >
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  statusAccent[cliente.estado],
+                )}
+              />
+              {cliente.estado}
+            </Badge>
+            <Badge
+              className="rounded-full border border-border/70 bg-figma-shell/70 px-3 py-1.5 text-figma-table"
+              variant="outline"
+            >
+              ID {cliente.id}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <Field label="Nombre" value={cliente.nombre} />
+          <Field label="Empresa" value={cliente.empresa} />
+          <Field label="Localidad" value={cliente.localidad} />
+          <Field label="Email" value={cliente.email} />
+          <Field label="Lugar de contacto" value={cliente.lugarContacto} />
+          <Field label="Fecha de inserción" value={cliente.insercion} />
+          <Field label="Último contacto" value={cliente.ultimoContacto} />
+          <Field label="Emails enviados" value={cliente.emailsEnviados} />
+        </div>
+
+        <div className="mt-8 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-3xl border border-border/70 bg-figma-shell/45 p-5">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Próximo movimiento
+            </p>
+            <h2 className="mt-3 font-display text-xl font-semibold tracking-tight text-figma-table">
+              Preparar seguimiento personalizado
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-figma-placeholder">
+              El historial indica que este contacto encaja con una secuencia de
+              correo centrada en valor sectorial y caso de uso concreto.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/dashboard/correo">
+                <Button className="h-9 gap-2 bg-figma-table px-3 text-sm font-medium text-white hover:bg-figma-table/90">
+                  <Mail className="size-3.5" />
+                  Abrir maquetas
+                </Button>
+              </Link>
+              <Link href="/dashboard/noticias/interesantes">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
+                >
+                  <Sparkles className="size-3.5" />
+                  Ver noticias relevantes
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Resumen rápido
+            </p>
+            <div className="mt-4 space-y-4 text-sm text-figma-table">
+              <div className="flex items-center gap-3">
+                <MapPin className="size-4 text-figma-placeholder" />
+                <span>{cliente.localidad}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="size-4 text-figma-placeholder" />
+                <span>{cliente.email}</span>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-figma-shell/45 p-4 text-figma-placeholder">
+                Lead con {cliente.emailsEnviados} envíos previos y estado actual{" "}
+                <span className="font-medium text-figma-table">
+                  {cliente.estado}
+                </span>
+                .
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

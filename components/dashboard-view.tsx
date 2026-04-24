@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,8 +27,38 @@ import { cn } from "@/lib/utils";
 import {
   type Cliente,
   type ClienteEstado,
-  clientesMock,
 } from "@/lib/mock-data";
+import { getClientes, type ClienteAPI } from "@/lib/api";
+
+function mapEstadoBackend(nombre?: string): ClienteEstado {
+  switch (nombre) {
+    case "Lead":
+      return "Clientes nuevos";
+    case "Prospecto":
+      return "Contactados";
+    case "Cliente":
+      return "Trato cerrado";
+    default:
+      return "Contactados";
+  }
+}
+
+function mapClienteAPI(c: ClienteAPI): Cliente {
+  return {
+    id: String(c.id),
+    nombre: c.nombre,
+    estado: mapEstadoBackend(c.estado_cliente_detalle?.nombre),
+    empresa: c.tipo === "empresa" ? c.nombre : "",
+    localidad: c.ciudad ?? "",
+    email: c.email ?? "",
+    lugarContacto: c.direccion ?? "",
+    insercion: c.fecha_creacion
+      ? new Date(c.fecha_creacion).toLocaleDateString("es-ES")
+      : "",
+    ultimoContacto: "",
+    emailsEnviados: 0,
+  };
+}
 
 const estadosCliente: ClienteEstado[] = [
   "Clientes nuevos",
@@ -36,14 +66,6 @@ const estadosCliente: ClienteEstado[] = [
   "Negociación",
   "Trato cerrado",
 ];
-
-const localidadesDisponibles = [...new Set(clientesMock.map((c) => c.localidad))].sort(
-  (a, b) => a.localeCompare(b, "es"),
-);
-
-const lugaresDisponibles = [...new Set(clientesMock.map((c) => c.lugarContacto))].sort(
-  (a, b) => a.localeCompare(b, "es"),
-);
 
 const kpiDots = {
   campanas: "purple",
@@ -78,7 +100,7 @@ function estadoDotClass(estado: ClienteEstado): string {
   }
 }
 
-function EstadoPill({ estado }: { estado: ClienteEstado }) {
+function EstadoPill({ estado }: Readonly<{ estado: ClienteEstado }>) {
   return (
     <span className="inline-flex min-w-[8.5rem] max-w-[11rem] items-center justify-between gap-2 rounded-md bg-figma-shell/80 px-2.5 py-1 text-[11px] font-medium text-figma-table">
       <span className="truncate">{estado}</span>
@@ -122,6 +144,7 @@ function matchesSearch(cliente: Cliente, query: string) {
 }
 
 export function DashboardView() {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -132,8 +155,24 @@ export function DashboardView() {
   const [onlyWithEmails, setOnlyWithEmails] = useState(false);
   const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
 
+  useEffect(() => {
+    getClientes()
+      .then((data) => setClientes(data.map(mapClienteAPI)))
+      .catch(() => setClientes([]));
+  }, []);
+
+  const localidadesDisponibles = useMemo(
+    () => [...new Set(clientes.map((c) => c.localidad).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
+    [clientes],
+  );
+
+  const lugaresDisponibles = useMemo(
+    () => [...new Set(clientes.map((c) => c.lugarContacto).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
+    [clientes],
+  );
+
   const filteredClientes = useMemo(() => {
-    return clientesMock.filter((cliente) => {
+    return clientes.filter((cliente) => {
       const matchesEstado =
         selectedEstados.length === 0 || selectedEstados.includes(cliente.estado);
       const matchesLocalidad =
@@ -153,6 +192,7 @@ export function DashboardView() {
       );
     });
   }, [
+    clientes,
     onlyWithEmails,
     searchQuery,
     selectedEstados,
@@ -368,7 +408,7 @@ export function DashboardView() {
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-figma-placeholder">
           <span>
-            Mostrando {filteredClientes.length} de {clientesMock.length} clientes
+            Mostrando {filteredClientes.length} de {clientes.length} clientes
           </span>
           {selectedClientes.length > 0 ? (
             <span>Seleccionados {selectedClientes.length}</span>

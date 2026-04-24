@@ -43,9 +43,17 @@ export async function api<T = unknown>(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string>),
+      ...options.headers,
     },
   });
+
+  if (res.status === 401) {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    document.cookie = "salesmails_auth=; path=/; max-age=0";
+    globalThis.location.href = "/";
+    return undefined as T;
+  }
 
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${url}`);

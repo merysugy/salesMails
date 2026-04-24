@@ -120,6 +120,114 @@ function toggleValue<T>(values: T[], value: T) {
     : [...values, value];
 }
 
+function ClientesTableBody({
+  loading,
+  error,
+  filteredClientes,
+  selectedClientes,
+  onToggleCliente,
+}: Readonly<{
+  loading: boolean;
+  error: boolean;
+  filteredClientes: Cliente[];
+  selectedClientes: string[];
+  onToggleCliente: (id: string, checked: boolean | "indeterminate") => void;
+}>) {
+  if (loading) {
+    return (
+      <TableRow className="border-border/60">
+        <TableCell
+          colSpan={11}
+          className="py-10 text-center text-sm text-figma-placeholder"
+        >
+          Cargando clientes…
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (error) {
+    return (
+      <TableRow className="border-border/60">
+        <TableCell
+          colSpan={11}
+          className="py-10 text-center text-sm text-red-500"
+        >
+          No se pudieron cargar los clientes. Comprueba tu sesión o recarga la página.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (filteredClientes.length === 0) {
+    return (
+      <TableRow className="border-border/60">
+        <TableCell
+          colSpan={11}
+          className="py-10 text-center text-sm text-figma-placeholder"
+        >
+          No hay clientes que coincidan con la búsqueda o los filtros activos.
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return filteredClientes.map((c: Cliente) => (
+    <TableRow
+      key={c.id}
+      className="border-border/60 transition-colors hover:bg-muted/40"
+    >
+      <TableCell className="py-3">
+        <Checkbox
+          checked={selectedClientes.includes(c.id)}
+          onCheckedChange={(checked) => onToggleCliente(c.id, checked)}
+          aria-label={`Seleccionar ${c.nombre}`}
+          className="border-figma-accent data-checked:border-figma-accent data-checked:bg-figma-accent"
+        />
+      </TableCell>
+      <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
+        {c.nombre}
+      </TableCell>
+      <TableCell className="py-3">
+        <EstadoPill estado={c.estado} />
+      </TableCell>
+      <TableCell className="max-w-[140px] truncate py-3 text-[10.5px] font-medium text-figma-table">
+        {c.empresa}
+      </TableCell>
+      <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
+        {c.localidad}
+      </TableCell>
+      <TableCell className="max-w-[160px] truncate py-3 text-[10.5px] font-medium text-figma-table">
+        {c.email}
+      </TableCell>
+      <TableCell className="max-w-[130px] truncate py-3 text-[10.5px] font-medium text-figma-table">
+        {c.lugarContacto}
+      </TableCell>
+      <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
+        {c.insercion}
+      </TableCell>
+      <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
+        {c.ultimoContacto}
+      </TableCell>
+      <TableCell className="py-3 text-[10.5px] font-medium tabular-nums text-figma-table">
+        {c.emailsEnviados}
+      </TableCell>
+      <TableCell className="py-3 text-right">
+        <Link href={`/dashboard/clientes/${c.id}`}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 border-border px-2.5 text-[11px] font-medium text-figma-table hover:bg-muted"
+          >
+            Ficha
+          </Button>
+        </Link>
+      </TableCell>
+    </TableRow>
+  ));
+}
+
 function matchesSearch(cliente: Cliente, query: string) {
   if (!query) {
     return true;
@@ -145,6 +253,8 @@ function matchesSearch(cliente: Cliente, query: string) {
 
 export function DashboardView() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -156,9 +266,15 @@ export function DashboardView() {
   const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
 
   useEffect(() => {
+    setLoading(true);
+    setError(false);
     getClientes()
       .then((data) => setClientes(data.map(mapClienteAPI)))
-      .catch(() => setClientes([]));
+      .catch(() => {
+        setError(true);
+        setClientes([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const localidadesDisponibles = useMemo(
@@ -584,74 +700,13 @@ export function DashboardView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredClientes.length > 0 ? (
-              filteredClientes.map((c: Cliente) => (
-                <TableRow
-                  key={c.id}
-                  className="border-border/60 transition-colors hover:bg-muted/40"
-                >
-                  <TableCell className="py-3">
-                    <Checkbox
-                      checked={selectedClientes.includes(c.id)}
-                      onCheckedChange={(checked) =>
-                        toggleClienteSelection(c.id, checked)
-                      }
-                      aria-label={`Seleccionar ${c.nombre}`}
-                      className="border-figma-accent data-checked:border-figma-accent data-checked:bg-figma-accent"
-                    />
-                  </TableCell>
-                  <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
-                    {c.nombre}
-                  </TableCell>
-                  <TableCell className="py-3">
-                    <EstadoPill estado={c.estado} />
-                  </TableCell>
-                  <TableCell className="max-w-[140px] truncate py-3 text-[10.5px] font-medium text-figma-table">
-                    {c.empresa}
-                  </TableCell>
-                  <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
-                    {c.localidad}
-                  </TableCell>
-                  <TableCell className="max-w-[160px] truncate py-3 text-[10.5px] font-medium text-figma-table">
-                    {c.email}
-                  </TableCell>
-                  <TableCell className="max-w-[130px] truncate py-3 text-[10.5px] font-medium text-figma-table">
-                    {c.lugarContacto}
-                  </TableCell>
-                  <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
-                    {c.insercion}
-                  </TableCell>
-                  <TableCell className="py-3 text-[10.5px] font-medium whitespace-nowrap text-figma-table">
-                    {c.ultimoContacto}
-                  </TableCell>
-                  <TableCell className="py-3 text-[10.5px] font-medium tabular-nums text-figma-table">
-                    {c.emailsEnviados}
-                  </TableCell>
-                  <TableCell className="py-3 text-right">
-                    <Link href={`/dashboard/clientes/${c.id}`}>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 border-border px-2.5 text-[11px] font-medium text-figma-table hover:bg-muted"
-                      >
-                        Ficha
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow className="border-border/60">
-                <TableCell
-                  colSpan={11}
-                  className="py-10 text-center text-sm text-figma-placeholder"
-                >
-                  No hay clientes que coincidan con la búsqueda o los filtros
-                  activos.
-                </TableCell>
-              </TableRow>
-            )}
+            <ClientesTableBody
+              loading={loading}
+              error={error}
+              filteredClientes={filteredClientes}
+              selectedClientes={selectedClientes}
+              onToggleCliente={toggleClienteSelection}
+            />
           </TableBody>
         </Table>
       </div>

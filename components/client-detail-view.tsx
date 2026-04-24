@@ -1,11 +1,14 @@
+"use client";
+
 import { ArrowLeft, Mail, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, type ClienteEstado } from "@/lib/mock-data";
+import { getClienteById, type ClienteAPI } from "@/lib/api";
+import { type ClienteEstado } from "@/lib/mock-data";
 
 const statusAccent: Record<ClienteEstado, string> = {
   "Clientes nuevos": "bg-kpi-green",
@@ -14,15 +17,58 @@ const statusAccent: Record<ClienteEstado, string> = {
   "Trato cerrado": "bg-kpi-grey",
 };
 
+type ClienteDetalle = {
+  id: string;
+  nombre: string;
+  estado: ClienteEstado;
+  empresa: string;
+  localidad: string;
+  email: string;
+  lugarContacto: string;
+  insercion: string;
+  ultimoContacto: string;
+  emailsEnviados: number;
+};
+
+function mapEstadoBackend(nombre?: string): ClienteEstado {
+  switch (nombre) {
+    case "Lead":
+      return "Clientes nuevos";
+    case "Prospecto":
+      return "Contactados";
+    case "Cliente":
+      return "Trato cerrado";
+    default:
+      return "Contactados";
+  }
+}
+
+function mapClienteAPI(c: ClienteAPI): ClienteDetalle {
+  return {
+    id: String(c.id),
+    nombre: c.nombre,
+    estado: mapEstadoBackend(c.estado_cliente_detalle?.nombre),
+    empresa: c.tipo === "empresa" ? c.nombre : "",
+    localidad: c.ciudad ?? "",
+    email: c.email ?? "",
+    lugarContacto: c.direccion ?? "",
+    insercion: c.fecha_creacion
+      ? new Date(c.fecha_creacion).toLocaleDateString("es-ES")
+      : "",
+    ultimoContacto: "",
+    emailsEnviados: 0,
+  };
+}
+
 function Field({
   label,
   value,
   grow,
-}: {
+}: Readonly<{
   label: string;
   value: string | number;
   grow?: boolean;
-}) {
+}>) {
   return (
     <div className={cn("space-y-3", grow && "md:col-span-2 xl:col-span-3")}>
       <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
@@ -35,11 +81,52 @@ function Field({
   );
 }
 
-export function ClientDetailView({ id }: { id: string }) {
-  const cliente = getClienteById(id);
+export function ClientDetailView({ id }: Readonly<{ id: string }>) {
+  const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!cliente) {
-    notFound();
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+    getClienteById(id)
+      .then((data) => setCliente(mapClienteAPI(data)))
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message.includes("404")) {
+          globalThis.location.href = "/dashboard";
+          return;
+        }
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full items-center justify-center">
+        <p className="text-sm text-figma-placeholder">Cargando cliente…</p>
+      </div>
+    );
+  }
+
+  if (error || !cliente) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-4">
+        <p className="text-sm text-red-500">
+          No se pudo cargar el cliente. Comprueba tu sesión o vuelve al listado.
+        </p>
+        <Link href="/dashboard">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-2 border-border px-3 text-sm font-medium text-figma-table hover:bg-muted"
+          >
+            <ArrowLeft className="size-3.5" />
+            Volver al listado
+          </Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -151,10 +238,7 @@ export function ClientDetailView({ id }: { id: string }) {
               </div>
               <div className="rounded-2xl border border-border/60 bg-figma-shell/45 p-4 text-figma-placeholder">
                 Lead con {cliente.emailsEnviados} envíos previos y estado actual{" "}
-                <span className="font-medium text-figma-table">
-                  {cliente.estado}
-                </span>
-                .
+                <span className="font-medium text-figma-table">{cliente.estado}</span>.
               </div>
             </div>
           </div>

@@ -73,3 +73,7 @@ export async function api<T = unknown>(
 export async function getClientes(): Promise<ClienteAPI[]> {
   return api<ClienteAPI[]>("/api/clients/");
 }
+
+export async function getClienteById(id: string): Promise<ClienteAPI> {
+  return api<ClienteAPI>(`/api/clients/${id}/`);
+}

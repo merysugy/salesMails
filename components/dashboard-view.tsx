@@ -501,7 +501,17 @@ export function DashboardView() {
             Estado de cliente
             {selectedEstados.length > 0 ? ` (${selectedEstados.length})` : ""}
           </Button>
-          <div className="ml-auto flex w-full justify-end sm:w-auto">
+          <div className="ml-auto flex w-full justify-end gap-2 sm:w-auto">
+            <Link href="/dashboard/clientes/nuevo">
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
+              >
+                Nuevo cliente
+              </Button>
+            </Link>
             <Link
               href={
                 selectedClientes.length > 0

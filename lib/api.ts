@@ -87,3 +87,25 @@ export async function updateCliente(
     body: JSON.stringify(data),
   });
 }
+
+export async function createCliente(
+  data: Partial<ClienteAPI>,
+): Promise<ClienteAPI> {
+  return api<ClienteAPI>("/api/clients/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// =========================================================
+// Endpoints de estados de cliente
+// =========================================================
+
+export type EstadoClienteAPI = {
+  id: number;
+  nombre: string;
+};
+
+export async function getEstadosCliente(): Promise<EstadoClienteAPI[]> {
+  return api<EstadoClienteAPI[]>("/api/client-status/");
+}

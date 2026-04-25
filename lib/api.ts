@@ -77,3 +77,13 @@ export async function getClientes(): Promise<ClienteAPI[]> {
 export async function getClienteById(id: string): Promise<ClienteAPI> {
   return api<ClienteAPI>(`/api/clients/${id}/`);
 }
+
+export async function updateCliente(
+  id: string,
+  data: Partial<ClienteAPI>,
+): Promise<ClienteAPI> {
+  return api<ClienteAPI>(`/api/clients/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}

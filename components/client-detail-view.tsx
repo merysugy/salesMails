@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, type ClienteAPI } from "@/lib/api";
+import { getClienteById, updateCliente, type ClienteAPI } from "@/lib/api";
 import { type ClienteEstado } from "@/lib/mock-data";
 
 const statusAccent: Record<ClienteEstado, string> = {
@@ -81,16 +81,112 @@ function Field({
   );
 }
 
+function EditableField({
+  label,
+  value,
+  editing,
+  inputValue,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  editing: boolean;
+  inputValue: string;
+  onChange: (v: string) => void;
+}>) {
+  if (!editing) return <Field label={label} value={value} />;
+  return (
+    <div className="space-y-3">
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+        {label}
+      </p>
+      <input
+        value={inputValue}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+      />
+    </div>
+  );
+}
+
 export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    nombre: "",
+    email: "",
+    localidad: "",
+    lugarContacto: "",
+  });
+
+  const handleSave = async () => {
+    if (!cliente) return;
+    if (!form.nombre.trim()) {
+      alert("El nombre es obligatorio");
+      return;
+    }
+    if (
+      form.nombre === cliente.nombre &&
+      form.email === cliente.email &&
+      form.localidad === cliente.localidad &&
+      form.lugarContacto === cliente.lugarContacto
+    ) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await updateCliente(cliente.id, {
+        nombre: form.nombre.trim(),
+        email: form.email.trim() || null,
+        ciudad: form.localidad.trim() || null,
+        direccion: form.lugarContacto.trim() || null,
+      });
+      const mapped = mapClienteAPI(updated);
+      setCliente(mapped);
+      setForm({
+        nombre: mapped.nombre,
+        email: mapped.email,
+        localidad: mapped.localidad,
+        lugarContacto: mapped.lugarContacto,
+      });
+      setEditing(false);
+      alert("Cliente actualizado correctamente");
+    } catch {
+      alert("Error al guardar los cambios");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (!cliente) return;
+    setForm({
+      nombre: cliente.nombre,
+      email: cliente.email,
+      localidad: cliente.localidad,
+      lugarContacto: cliente.lugarContacto,
+    });
+    setEditing(false);
+  };
 
   useEffect(() => {
     setLoading(true);
     setError(false);
     getClienteById(id)
-      .then((data) => setCliente(mapClienteAPI(data)))
+      .then((data) => {
+        const mapped = mapClienteAPI(data);
+        setCliente(mapped);
+        setForm({
+          nombre: mapped.nombre,
+          email: mapped.email,
+          localidad: mapped.localidad,
+          lugarContacto: mapped.lugarContacto,
+        });
+      })
       .catch((err: unknown) => {
         if (err instanceof Error && err.message.includes("404")) {
           globalThis.location.href = "/dashboard";
@@ -151,7 +247,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
               Ficha de cliente
             </p>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-figma-table md:text-3xl">
-              {cliente.nombre}
+              {editing ? form.nombre : cliente.nombre}
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-figma-placeholder">
               Resumen del lead, contexto comercial y últimos puntos de contacto.
@@ -177,15 +273,72 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
             >
               ID {cliente.id}
             </Badge>
+            {editing ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  onClick={handleCancel}
+                  className="h-8 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving}
+                  onClick={handleSave}
+                  className="h-8 bg-figma-table px-3 text-xs font-medium text-white hover:bg-figma-table/90"
+                >
+                  {saving ? "Guardando…" : "Guardar"}
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+                className="h-8 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
+              >
+                Editar
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <Field label="Nombre" value={cliente.nombre} />
+          <EditableField
+            label="Nombre"
+            value={cliente.nombre}
+            editing={editing}
+            inputValue={form.nombre}
+            onChange={(v) => setForm((f) => ({ ...f, nombre: v }))}
+          />
           <Field label="Empresa" value={cliente.empresa} />
-          <Field label="Localidad" value={cliente.localidad} />
-          <Field label="Email" value={cliente.email} />
-          <Field label="Lugar de contacto" value={cliente.lugarContacto} />
+          <EditableField
+            label="Localidad"
+            value={cliente.localidad}
+            editing={editing}
+            inputValue={form.localidad}
+            onChange={(v) => setForm((f) => ({ ...f, localidad: v }))}
+          />
+          <EditableField
+            label="Email"
+            value={cliente.email}
+            editing={editing}
+            inputValue={form.email}
+            onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+          />
+          <EditableField
+            label="Lugar de contacto"
+            value={cliente.lugarContacto}
+            editing={editing}
+            inputValue={form.lugarContacto}
+            onChange={(v) => setForm((f) => ({ ...f, lugarContacto: v }))}
+          />
           <Field label="Fecha de inserción" value={cliente.insercion} />
           <Field label="Último contacto" value={cliente.ultimoContacto} />
           <Field label="Emails enviados" value={cliente.emailsEnviados} />

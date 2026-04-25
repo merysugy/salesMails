@@ -119,3 +119,13 @@ export async function deleteCliente(id: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export async function getClientesInactivos(): Promise<ClienteAPI[]> {
+  return api<ClienteAPI[]>("/api/clients/inactive/");
+}
+
+export async function restoreCliente(id: string): Promise<ClienteAPI> {
+  return api<ClienteAPI>(`/api/clients/${id}/restore/`, {
+    method: "POST",
+  });
+}

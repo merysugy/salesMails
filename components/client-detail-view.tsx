@@ -2,12 +2,13 @@
 
 import { ArrowLeft, Mail, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, updateCliente, type ClienteAPI } from "@/lib/api";
+import { getClienteById, updateCliente, deleteCliente, type ClienteAPI } from "@/lib/api";
 import { type ClienteEstado } from "@/lib/mock-data";
 
 const statusAccent: Record<ClienteEstado, string> = {
@@ -110,11 +111,13 @@ function EditableField({
 }
 
 export function ClientDetailView({ id }: Readonly<{ id: string }>) {
+  const router = useRouter();
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     email: "",
@@ -173,6 +176,19 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
     setEditing(false);
   };
 
+  const handleDelete = async () => {
+    if (!cliente) return;
+    if (!confirm("¿Seguro que quieres eliminar este cliente?")) return;
+    setDeleting(true);
+    try {
+      await deleteCliente(cliente.id);
+      router.push("/dashboard");
+    } catch {
+      alert("Error al eliminar el cliente");
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     setError(false);
@@ -189,13 +205,13 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
       })
       .catch((err: unknown) => {
         if (err instanceof Error && err.message.includes("404")) {
-          globalThis.location.href = "/dashboard";
+          router.push("/dashboard");
           return;
         }
         setError(true);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, router]);
 
   if (loading) {
     return (
@@ -296,15 +312,27 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
                 </Button>
               </>
             ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setEditing(true)}
-                className="h-8 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
-              >
-                Editar
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="h-8 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
+                >
+                  Editar
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleting}
+                  onClick={handleDelete}
+                  className="h-8 px-3 text-xs font-medium"
+                >
+                  {deleting ? "Eliminando…" : "Eliminar"}
+                </Button>
+              </>
             )}
           </div>
         </div>

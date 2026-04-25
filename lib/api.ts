@@ -109,3 +109,13 @@ export type EstadoClienteAPI = {
 export async function getEstadosCliente(): Promise<EstadoClienteAPI[]> {
   return api<EstadoClienteAPI[]>("/api/client-status/");
 }
+
+// =========================================================
+// Delete cliente
+// =========================================================
+
+export async function deleteCliente(id: string): Promise<void> {
+  return api<void>(`/api/clients/${id}/`, {
+    method: "DELETE",
+  });
+}

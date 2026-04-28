@@ -120,6 +120,24 @@ export async function deleteCliente(id: string): Promise<void> {
   });
 }
 
+// =========================================================
+// Actividad de cliente
+// =========================================================
+
+export type ActividadClienteAPI = {
+  id: number;
+  tipo: string;
+  descripcion: string;
+  fecha_creacion: string;
+  usuario_nombre: string | null;
+};
+
+export async function getClienteActividad(
+  id: string,
+): Promise<ActividadClienteAPI[]> {
+  return api<ActividadClienteAPI[]>(`/api/clients/${id}/activity/`);
+}
+
 export async function getClientesInactivos(): Promise<ClienteAPI[]> {
   return api<ClienteAPI[]>("/api/clients/inactive/");
 }

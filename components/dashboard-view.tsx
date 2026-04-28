@@ -24,30 +24,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import {
-  type Cliente,
-  type ClienteEstado,
-} from "@/lib/mock-data";
-import { getClientes, getClientesInactivos, restoreCliente, type ClienteAPI } from "@/lib/api";
+import { getClientes, getClientesInactivos, restoreCliente, getEstadosCliente, type ClienteAPI } from "@/lib/api";
 
-function mapEstadoBackend(nombre?: string): ClienteEstado {
-  switch (nombre) {
-    case "Lead":
-      return "Clientes nuevos";
-    case "Prospecto":
-      return "Contactados";
-    case "Cliente":
-      return "Trato cerrado";
-    default:
-      return "Contactados";
-  }
-}
+type Cliente = {
+  id: string;
+  nombre: string;
+  estado: string;
+  empresa: string;
+  localidad: string;
+  email: string;
+  lugarContacto: string;
+  insercion: string;
+  ultimoContacto: string;
+  emailsEnviados: number;
+};
 
 function mapClienteAPI(c: ClienteAPI): Cliente {
   return {
     id: String(c.id),
     nombre: c.nombre,
-    estado: mapEstadoBackend(c.estado_cliente_detalle?.nombre),
+    estado: c.estado_cliente_detalle?.nombre ?? "Sin estado",
     empresa: c.tipo === "empresa" ? c.nombre : "",
     localidad: c.ciudad ?? "",
     email: c.email ?? "",
@@ -60,12 +56,6 @@ function mapClienteAPI(c: ClienteAPI): Cliente {
   };
 }
 
-const estadosCliente: ClienteEstado[] = [
-  "Clientes nuevos",
-  "Contactados",
-  "Negociación",
-  "Trato cerrado",
-];
 
 const kpiDots = {
   campanas: "purple",
@@ -83,24 +73,22 @@ const kpiDotClass: Record<(typeof kpiDots)[keyof typeof kpiDots], string> = {
   grey: "bg-kpi-grey",
 };
 
-function estadoDotClass(estado: ClienteEstado): string {
+function estadoDotClass(estado: string): string {
   switch (estado) {
-    case "Clientes nuevos":
+    case "Lead":
       return "bg-kpi-green";
-    case "Contactados":
+    case "Prospecto":
       return "bg-kpi-beige";
     case "Negociación":
       return "bg-kpi-orange";
-    case "Trato cerrado":
+    case "Cliente":
       return "bg-kpi-grey";
-    default: {
-      const _e: never = estado;
-      return _e;
-    }
+    default:
+      return "bg-kpi-grey";
   }
 }
 
-function EstadoPill({ estado }: Readonly<{ estado: ClienteEstado }>) {
+function EstadoPill({ estado }: Readonly<{ estado: string }>) {
   return (
     <span className="inline-flex min-w-[8.5rem] max-w-[11rem] items-center justify-between gap-2 rounded-md bg-figma-shell/80 px-2.5 py-1 text-[11px] font-medium text-figma-table">
       <span className="truncate">{estado}</span>
@@ -276,7 +264,8 @@ export function DashboardView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showStatusFilters, setShowStatusFilters] = useState(true);
-  const [selectedEstados, setSelectedEstados] = useState<ClienteEstado[]>([]);
+  const [estadosFilter, setEstadosFilter] = useState<string[]>([]);
+  const [selectedEstados, setSelectedEstados] = useState<string[]>([]);
   const [selectedLocalidades, setSelectedLocalidades] = useState<string[]>([]);
   const [selectedLugares, setSelectedLugares] = useState<string[]>([]);
   const [onlyWithEmails, setOnlyWithEmails] = useState(false);
@@ -294,6 +283,10 @@ export function DashboardView() {
       })
       .finally(() => setLoading(false));
   }, [showInactive]);
+
+  useEffect(() => {
+    getEstadosCliente().then((data) => setEstadosFilter(data.map((e) => e.nombre)));
+  }, []);
 
   const handleRestore = async (id: string) => {
     try {
@@ -368,13 +361,13 @@ export function DashboardView() {
     },
     {
       value: filteredClientes.filter(
-        (cliente) => cliente.estado === "Clientes nuevos",
+        (cliente) => cliente.estado === "Lead",
       ).length,
       label: "Clientes nuevos",
       dot: kpiDots.nuevos,
     },
     {
-      value: filteredClientes.filter((cliente) => cliente.estado === "Contactados")
+      value: filteredClientes.filter((cliente) => cliente.estado === "Prospecto")
         .length,
       label: "Contactados",
       dot: kpiDots.contactados,
@@ -387,7 +380,7 @@ export function DashboardView() {
     },
     {
       value: filteredClientes.filter(
-        (cliente) => cliente.estado === "Trato cerrado",
+        (cliente) => cliente.estado === "Cliente",
       ).length,
       label: "Tratos cerrados",
       dot: kpiDots.cerrados,
@@ -586,7 +579,7 @@ export function DashboardView() {
 
         {showStatusFilters ? (
           <div className="flex flex-wrap gap-2">
-            {estadosCliente.map((estado) => {
+            {estadosFilter.map((estado) => {
               const isActive = selectedEstados.includes(estado);
 
               return (

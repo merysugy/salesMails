@@ -8,20 +8,30 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, updateCliente, deleteCliente, type ClienteAPI } from "@/lib/api";
-import { type ClienteEstado } from "@/lib/mock-data";
+import { getClienteById, updateCliente, deleteCliente, getEstadosCliente, type ClienteAPI, type EstadoClienteAPI } from "@/lib/api";
 
-const statusAccent: Record<ClienteEstado, string> = {
-  "Clientes nuevos": "bg-kpi-green",
-  Contactados: "bg-kpi-beige",
-  "Negociación": "bg-kpi-orange",
-  "Trato cerrado": "bg-kpi-grey",
-};
+function statusAccent(estado: string): string {
+  switch (estado) {
+    case "Lead":
+      return "bg-kpi-green";
+    case "Prospecto":
+      return "bg-kpi-beige";
+    case "Cliente":
+      return "bg-kpi-grey";
+    case "Inactivo":
+      return "bg-kpi-orange";
+    case "Perdido":
+      return "bg-red-500";
+    default:
+      return "bg-kpi-grey";
+  }
+}
 
 type ClienteDetalle = {
   id: string;
   nombre: string;
-  estado: ClienteEstado;
+  estado: string;
+  estadoCliente: number;
   empresa: string;
   localidad: string;
   email: string;
@@ -31,24 +41,12 @@ type ClienteDetalle = {
   emailsEnviados: number;
 };
 
-function mapEstadoBackend(nombre?: string): ClienteEstado {
-  switch (nombre) {
-    case "Lead":
-      return "Clientes nuevos";
-    case "Prospecto":
-      return "Contactados";
-    case "Cliente":
-      return "Trato cerrado";
-    default:
-      return "Contactados";
-  }
-}
-
 function mapClienteAPI(c: ClienteAPI): ClienteDetalle {
   return {
     id: String(c.id),
     nombre: c.nombre,
-    estado: mapEstadoBackend(c.estado_cliente_detalle?.nombre),
+    estado: c.estado_cliente_detalle?.nombre ?? "Sin estado",
+    estadoCliente: c.estado_cliente,
     empresa: c.tipo === "empresa" ? c.nombre : "",
     localidad: c.ciudad ?? "",
     email: c.email ?? "",
@@ -110,6 +108,45 @@ function EditableField({
   );
 }
 
+function EditableSelect({
+  label,
+  value,
+  editing,
+  selectValue,
+  options,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  editing: boolean;
+  selectValue: number;
+  options: EstadoClienteAPI[];
+  onChange: (v: number) => void;
+}>) {
+  if (!editing) return <Field label={label} value={value} />;
+  return (
+    <div className="space-y-3">
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+        {label}
+      </p>
+      <select
+        value={selectValue}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+      >
+        <option value={0} disabled>
+          Selecciona estado
+        </option>
+        {options.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {opt.nombre}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const router = useRouter();
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
@@ -118,11 +155,13 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [estados, setEstados] = useState<EstadoClienteAPI[]>([]);
   const [form, setForm] = useState({
     nombre: "",
     email: "",
     localidad: "",
     lugarContacto: "",
+    estadoCliente: 0,
   });
 
   const handleSave = async () => {
@@ -131,11 +170,16 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
       alert("El nombre es obligatorio");
       return;
     }
+    if (!form.estadoCliente) {
+      alert("Selecciona un estado");
+      return;
+    }
     if (
       form.nombre === cliente.nombre &&
       form.email === cliente.email &&
       form.localidad === cliente.localidad &&
-      form.lugarContacto === cliente.lugarContacto
+      form.lugarContacto === cliente.lugarContacto &&
+      form.estadoCliente === cliente.estadoCliente
     ) {
       setEditing(false);
       return;
@@ -147,6 +191,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
         email: form.email.trim() || null,
         ciudad: form.localidad.trim() || null,
         direccion: form.lugarContacto.trim() || null,
+        estado_cliente: form.estadoCliente,
       });
       const mapped = mapClienteAPI(updated);
       setCliente(mapped);
@@ -155,6 +200,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
         email: mapped.email,
         localidad: mapped.localidad,
         lugarContacto: mapped.lugarContacto,
+        estadoCliente: mapped.estadoCliente,
       });
       setEditing(false);
       alert("Cliente actualizado correctamente");
@@ -172,6 +218,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
       email: cliente.email,
       localidad: cliente.localidad,
       lugarContacto: cliente.lugarContacto,
+      estadoCliente: cliente.estadoCliente,
     });
     setEditing(false);
   };
@@ -192,15 +239,17 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   useEffect(() => {
     setLoading(true);
     setError(false);
-    getClienteById(id)
-      .then((data) => {
-        const mapped = mapClienteAPI(data);
+    Promise.all([getClienteById(id), getEstadosCliente()])
+      .then(([clienteData, estadosData]) => {
+        const mapped = mapClienteAPI(clienteData);
         setCliente(mapped);
+        setEstados(estadosData);
         setForm({
           nombre: mapped.nombre,
           email: mapped.email,
           localidad: mapped.localidad,
           lugarContacto: mapped.lugarContacto,
+          estadoCliente: mapped.estadoCliente,
         });
       })
       .catch((err: unknown) => {
@@ -278,7 +327,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
               <span
                 className={cn(
                   "size-2 rounded-full",
-                  statusAccent[cliente.estado],
+                  statusAccent(cliente.estado),
                 )}
               />
               {cliente.estado}
@@ -366,6 +415,14 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
             editing={editing}
             inputValue={form.lugarContacto}
             onChange={(v) => setForm((f) => ({ ...f, lugarContacto: v }))}
+          />
+          <EditableSelect
+            label="Estado"
+            value={cliente.estado}
+            editing={editing}
+            selectValue={form.estadoCliente}
+            options={estados}
+            onChange={(v) => setForm((f) => ({ ...f, estadoCliente: v }))}
           />
           <Field label="Fecha de inserción" value={cliente.insercion} />
           <Field label="Último contacto" value={cliente.ultimoContacto} />

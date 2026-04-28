@@ -147,3 +147,27 @@ export async function restoreCliente(id: string): Promise<ClienteAPI> {
     method: "POST",
   });
 }
+
+// =========================================================
+// Envío directo de email a clientes
+// =========================================================
+
+export type SendDirectEmailResponse = {
+  total: number;
+  enviados: number;
+  errores: {
+    cliente_id: number;
+    error: string;
+  }[];
+};
+
+export async function sendDirectEmail(data: {
+  cliente_ids: number[];
+  asunto: string;
+  mensaje: string;
+}): Promise<SendDirectEmailResponse> {
+  return api<SendDirectEmailResponse>("/api/campaign-sends/send-direct/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

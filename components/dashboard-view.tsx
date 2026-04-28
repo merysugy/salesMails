@@ -548,8 +548,8 @@ export function DashboardView() {
             <Link
               href={
                 selectedClientes.length > 0
-                  ? `/dashboard/correo?clientes=${selectedClientes.join(",")}`
-                  : "/dashboard/correo"
+                  ? `/dashboard/correo/enviar?clientes=${selectedClientes.join(",")}`
+                  : "/dashboard/correo/enviar"
               }
             >
               <Button

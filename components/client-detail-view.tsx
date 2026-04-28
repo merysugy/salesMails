@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, updateCliente, deleteCliente, getEstadosCliente, type ClienteAPI, type EstadoClienteAPI } from "@/lib/api";
+import { getClienteById, updateCliente, deleteCliente, getEstadosCliente, getClienteActividad, type ClienteAPI, type EstadoClienteAPI, type ActividadClienteAPI } from "@/lib/api";
 
 function statusAccent(estado: string): string {
   switch (estado) {
@@ -156,6 +156,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [estados, setEstados] = useState<EstadoClienteAPI[]>([]);
+  const [actividades, setActividades] = useState<ActividadClienteAPI[]>([]);
   const [form, setForm] = useState({
     nombre: "",
     email: "",
@@ -203,6 +204,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
         estadoCliente: mapped.estadoCliente,
       });
       setEditing(false);
+      getClienteActividad(cliente.id).then(setActividades).catch(() => {});
       alert("Cliente actualizado correctamente");
     } catch {
       alert("Error al guardar los cambios");
@@ -239,11 +241,12 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   useEffect(() => {
     setLoading(true);
     setError(false);
-    Promise.all([getClienteById(id), getEstadosCliente()])
-      .then(([clienteData, estadosData]) => {
+    Promise.all([getClienteById(id), getEstadosCliente(), getClienteActividad(id)])
+      .then(([clienteData, estadosData, actividadesData]) => {
         const mapped = mapClienteAPI(clienteData);
         setCliente(mapped);
         setEstados(estadosData);
+        setActividades(actividadesData);
         setForm({
           nombre: mapped.nombre,
           email: mapped.email,
@@ -480,6 +483,30 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-border/70 bg-figma-shell/45 p-5">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+            Actividad reciente
+          </p>
+          {actividades.length === 0 ? (
+            <p className="mt-4 text-sm text-figma-placeholder">Sin actividad registrada.</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {actividades.map((act) => (
+                <li key={act.id} className="flex items-start gap-3">
+                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-figma-placeholder" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-figma-table">{act.descripcion}</p>
+                    <p className="mt-0.5 text-xs text-figma-placeholder">
+                      {new Date(act.fecha_creacion).toLocaleString("es-ES")}
+                      {act.usuario_nombre ? ` · ${act.usuario_nombre}` : ""}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

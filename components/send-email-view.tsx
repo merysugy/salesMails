@@ -3,10 +3,10 @@
 import { ArrowLeft, Mail, Send } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { sendDirectEmail } from "@/lib/api";
+import { sendDirectEmail, getPlantillas, getClienteById, type PlantillaEmailAPI } from "@/lib/api";
 
 export function SendEmailView() {
   const searchParams = useSearchParams();
@@ -18,6 +18,9 @@ export function SendEmailView() {
       .map(Number)
       .filter(Boolean) ?? [];
 
+  const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
+  const [plantillaId, setPlantillaId] = useState<number | null>(null);
+  const [previewNombre, setPreviewNombre] = useState<string | null>(null);
   const [asunto, setAsunto] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [sending, setSending] = useState(false);
@@ -26,6 +29,28 @@ export function SendEmailView() {
     enviados: number;
     errores: { cliente_id: number; error: string }[];
   } | null>(null);
+
+  useEffect(() => {
+    getPlantillas().then(setPlantillas).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (clienteIds.length === 0) return;
+
+    setPreviewNombre(null);
+
+    getClienteById(String(clienteIds[0]))
+      .then((c) => setPreviewNombre(c.nombre))
+      .catch(() => setPreviewNombre(null));
+  }, [clienteIds]);
+
+  const handleSelectPlantilla = (id: number) => {
+    const plantilla = plantillas.find((p) => p.id === id);
+    if (!plantilla) return;
+    setPlantillaId(plantilla.id);
+    setAsunto(plantilla.asunto);
+    setMensaje(plantilla.cuerpo);
+  };
 
   const handleSend = async () => {
     if (clienteIds.length === 0) {
@@ -43,6 +68,7 @@ export function SendEmailView() {
     try {
       const res = await sendDirectEmail({
         cliente_ids: clienteIds,
+        ...(plantillaId ? { plantilla_id: plantillaId } : {}),
         asunto: asunto.trim(),
         mensaje: mensaje.trim(),
       });
@@ -59,6 +85,14 @@ export function SendEmailView() {
     clienteIds.length > 0
       ? `Se enviará a ${clienteIds.length} cliente${plural} seleccionado${plural}.`
       : "No hay clientes seleccionados. Vuelve al listado para seleccionarlos.";
+
+  const asuntoPreview = previewNombre
+    ? asunto.replace("{{nombre}}", previewNombre)
+    : asunto;
+  const mensajePreview = previewNombre
+    ? mensaje.replace("{{nombre}}", previewNombre)
+    : mensaje;
+  const mostrarPreview = asunto.trim() !== "" || mensaje.trim() !== "";
 
   return (
     <div className="flex min-h-full flex-col overflow-auto pr-1">
@@ -115,6 +149,37 @@ export function SendEmailView() {
 
         {/* Formulario */}
         <div className="mt-8 grid gap-5 md:grid-cols-2">
+          {/* Plantilla */}
+          {plantillas.length > 0 && (
+            <div className="space-y-3 md:col-span-2">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+                Plantilla (opcional)
+              </p>
+              <select
+                value={plantillaId ?? ""}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val) handleSelectPlantilla(val);
+                  else setPlantillaId(null);
+                }}
+                disabled={sending}
+                className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent disabled:opacity-50"
+              >
+                <option value="">— Sin plantilla —</option>
+                {plantillas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+              {plantillaId && (
+                <p className="text-xs text-figma-placeholder">
+                  Plantilla cargada. Puedes editar el asunto y el mensaje antes de enviar.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Asunto */}
           <div className="space-y-3 md:col-span-2">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
@@ -146,6 +211,31 @@ export function SendEmailView() {
               Tip: usa <span className="font-mono font-medium text-figma-table">{"{{nombre}}"}</span> para personalizar el mensaje con el nombre de cada cliente.
             </p>
           </div>
+
+          {/* Vista previa */}
+          {mostrarPreview && (
+            <div className="space-y-3 md:col-span-2">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+                Vista previa
+              </p>
+              <div className="rounded-2xl border border-border/70 bg-figma-shell/45 px-5 py-4">
+                {asuntoPreview && (
+                  <p className="mb-3 text-xs font-semibold text-figma-placeholder">
+                    Asunto:{" "}
+                    <span className="font-medium text-figma-table">{asuntoPreview}</span>
+                  </p>
+                )}
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-figma-table">
+                  {mensajePreview || <span className="text-figma-placeholder italic">El mensaje aparecerá aquí…</span>}
+                </p>
+              </div>
+              <p className="text-xs text-figma-placeholder">
+                {previewNombre
+                  ? `Previsualización con nombre real: ${previewNombre}.`
+                  : "Cargando nombre del cliente…"}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Acciones */}

@@ -163,6 +163,7 @@ export type SendDirectEmailResponse = {
 
 export async function sendDirectEmail(data: {
   cliente_ids: number[];
+  plantilla_id?: number;
   asunto: string;
   mensaje: string;
 }): Promise<SendDirectEmailResponse> {
@@ -170,4 +171,19 @@ export async function sendDirectEmail(data: {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+// =========================================================
+// Plantillas de email
+// =========================================================
+
+export type PlantillaEmailAPI = {
+  id: number;
+  nombre: string;
+  asunto: string;
+  cuerpo: string;
+};
+
+export async function getPlantillas(): Promise<PlantillaEmailAPI[]> {
+  return api<PlantillaEmailAPI[]>("/api/templates/");
 }

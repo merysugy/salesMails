@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Mail, Settings, Sparkles } from "lucide-react";
+import { LayoutDashboard, Mail, Megaphone, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -20,6 +20,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
   { href: "/dashboard/correo", label: "Correo", icon: Mail },
+  { href: "/dashboard/campanas", label: "Campañas", icon: Megaphone },
   {
     href: "/dashboard/noticias/interesantes",
     label: "Funciones IA",

@@ -187,3 +187,104 @@ export type PlantillaEmailAPI = {
 export async function getPlantillas(): Promise<PlantillaEmailAPI[]> {
   return api<PlantillaEmailAPI[]>("/api/templates/");
 }
+
+export async function createPlantilla(
+  data: Omit<PlantillaEmailAPI, "id">,
+): Promise<PlantillaEmailAPI> {
+  return api<PlantillaEmailAPI>("/api/templates/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePlantilla(id: number): Promise<void> {
+  return api<void>(`/api/templates/${id}/`, { method: "DELETE" });
+}
+
+// =========================================================
+// Campañas de email
+// =========================================================
+
+export type CampanaEmailAPI = {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  plantilla: number;
+  fecha_creacion: string;
+};
+
+export async function getCampanas(): Promise<CampanaEmailAPI[]> {
+  return api<CampanaEmailAPI[]>("/api/campaigns/");
+}
+
+export async function getCampanaById(id: number): Promise<CampanaEmailAPI> {
+  return api<CampanaEmailAPI>(`/api/campaigns/${id}/`);
+}
+
+export async function createCampana(data: {
+  nombre: string;
+  descripcion?: string;
+  plantilla: number;
+}): Promise<CampanaEmailAPI> {
+  return api<CampanaEmailAPI>("/api/campaigns/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCampana(id: number): Promise<void> {
+  return api<void>(`/api/campaigns/${id}/`, { method: "DELETE" });
+}
+
+// =========================================================
+// Envíos de campaña (CampaignSend)
+// =========================================================
+
+export type CampaignSendAPI = {
+  id: number;
+  campana: number;
+  cliente: number | null;
+  estado: "pendiente" | "enviado" | "error";
+  fecha_envio: string | null;
+  error_mensaje: string | null;
+};
+
+export async function getCampaignSends(
+  campana_id?: number,
+): Promise<CampaignSendAPI[]> {
+  const qs = campana_id ? `?campana=${campana_id}` : "";
+  return api<CampaignSendAPI[]>(`/api/campaign-sends/${qs}`);
+}
+
+export async function createCampaignSend(data: {
+  campana: number;
+  cliente: number;
+}): Promise<CampaignSendAPI> {
+  return api<CampaignSendAPI>("/api/campaign-sends/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCampaignSend(id: number): Promise<void> {
+  return api<void>(`/api/campaign-sends/${id}/`, { method: "DELETE" });
+}
+
+export type SendBulkResponse = {
+  total: number;
+  enviados: number;
+  errores: number;
+};
+
+export async function sendCampaignSend(id: number): Promise<{ message: string }> {
+  return api<{ message: string }>(`/api/campaign-sends/${id}/send/`, {
+    method: "POST",
+  });
+}
+
+export async function sendBulk(campana_id?: number): Promise<SendBulkResponse> {
+  return api<SendBulkResponse>("/api/campaign-sends/send-bulk/", {
+    method: "POST",
+    body: JSON.stringify(campana_id ? { campana_id } : {}),
+  });
+}

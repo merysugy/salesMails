@@ -41,6 +41,7 @@ export type ClienteAPI = {
     id: number;
     nombre: string;
   } | null;
+  emails_enviados: number;
 };
 
 // =========================================================

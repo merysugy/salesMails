@@ -198,10 +198,10 @@ export function NewsView() {
   return (
     <div className="flex min-h-full flex-col">
       <NewsHeader
-        eyebrow="Noticias"
-        title="Apartado de noticias"
-        description="Monitoriza novedades relevantes para ajustar mensajes, reactivar cuentas y detectar oportunidades antes del siguiente contacto."
-        accentLabel="Contexto comercial"
+        eyebrow="Inteligencia comercial"
+        title="Análisis de mercado"
+        description="Módulo orientado a la generación de oportunidades mediante el análisis de información relevante del sector. Detecta señales de compra, cambios organizativos y novedades que permiten anticipar el siguiente contacto."
+        accentLabel="Contexto estratégico"
       />
       <NewsToolbar highlightLabel="Recientes" />
       <NewsTable items={newsItemsMock} />
@@ -216,8 +216,8 @@ export function InterestingNewsView() {
     <div className="flex min-h-full flex-col">
       <NewsHeader
         eyebrow="Funciones IA"
-        title="Noticias interesantes"
-        description="Vista priorizada con señales de mayor impacto comercial para ordenar el outreach y decidir qué cuentas mover primero."
+        title="Inteligencia comercial"
+        description="Vista priorizada con señales de mayor impacto comercial. El sistema identifica automáticamente las noticias más relevantes para ordenar el outreach y decidir qué cuentas activar primero."
         accentLabel="Prioridad alta"
       />
       <NewsToolbar highlightLabel="Estado de cliente" />

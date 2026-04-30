@@ -56,7 +56,15 @@ export async function api<T = unknown>(
   }
 
   if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${url}`);
+    const errorData = await res.json().catch(() => null);
+    const message =
+      errorData?.detail ||
+      errorData?.error ||
+      (Array.isArray(errorData?.non_field_errors)
+        ? errorData.non_field_errors.join(", ")
+        : null) ||
+      `Error ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) {
@@ -201,6 +209,16 @@ export async function deletePlantilla(id: number): Promise<void> {
   return api<void>(`/api/templates/${id}/`, { method: "DELETE" });
 }
 
+export async function updatePlantilla(
+  id: number,
+  data: Partial<Omit<PlantillaEmailAPI, "id">>,
+): Promise<PlantillaEmailAPI> {
+  return api<PlantillaEmailAPI>(`/api/templates/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 // =========================================================
 // Campañas de email
 // =========================================================
@@ -234,6 +252,16 @@ export async function createCampana(data: {
 
 export async function deleteCampana(id: number): Promise<void> {
   return api<void>(`/api/campaigns/${id}/`, { method: "DELETE" });
+}
+
+export async function updateCampana(
+  id: number,
+  data: Partial<{ nombre: string; descripcion: string; plantilla: number }>,
+): Promise<CampanaEmailAPI> {
+  return api<CampanaEmailAPI>(`/api/campaigns/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 // =========================================================

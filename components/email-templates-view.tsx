@@ -186,11 +186,14 @@ export function EmailTemplatesView() {
       <section>
         <div className="mb-4">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
-            Editor visual
+            Editor visual de plantillas
           </p>
           <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-figma-table">
-            Maquetador de email
+            Diseñador de emails
           </h2>
+          <p className="mt-1 text-sm text-figma-placeholder">
+            Herramienta para componer emails de forma visual por bloques, complementaria a la gestión de plantillas del sistema.
+          </p>
         </div>
         <EmailBuilderWorkspace />
       </section>

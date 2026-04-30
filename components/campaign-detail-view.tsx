@@ -5,10 +5,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock,
+  Pencil,
   Send,
   Trash2,
   UserPlus,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +34,7 @@ import {
   getPlantillas,
   sendBulk,
   sendCampaignSend,
+  updateCampana,
   type CampanaEmailAPI,
   type CampaignSendAPI,
   type ClienteAPI,
@@ -65,9 +68,19 @@ const estadoBadge: Record<
 export function CampaignDetailView({ campanaId }: Props) {
   const [campana, setCampana] = useState<CampanaEmailAPI | null>(null);
   const [plantilla, setPlantilla] = useState<PlantillaEmailAPI | null>(null);
+  const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
   const [sends, setSends] = useState<CampaignSendAPI[]>([]);
   const [clientes, setClientes] = useState<ClienteAPI[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit mode campaña
+  const [editMode, setEditMode] = useState(false);
+  const [editFields, setEditFields] = useState<{
+    nombre: string;
+    descripcion: string;
+    plantilla: number;
+  }>({ nombre: "", descripcion: "", plantilla: 0 });
+  const [saving, setSaving] = useState(false);
 
   // Modal asignar clientes
   const [showModal, setShowModal] = useState(false);
@@ -100,6 +113,7 @@ export function CampaignDetailView({ campanaId }: Props) {
     ])
       .then(([c, ps, ss, cls]) => {
         setCampana(c);
+        setPlantillas(ps);
         setPlantilla(ps.find((p) => p.id === c.plantilla) ?? null);
         setSends(ss);
         setClientes(cls);
@@ -119,13 +133,43 @@ export function CampaignDetailView({ campanaId }: Props) {
     return clientes.find((c) => c.id === id)?.nombre ?? `#${id}`;
   };
 
+  const openEdit = () => {
+    if (!campana) return;
+    setEditFields({
+      nombre: campana.nombre,
+      descripcion: campana.descripcion ?? "",
+      plantilla: campana.plantilla,
+    });
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!campana) return;
+    setSaving(true);
+    try {
+      const updated = await updateCampana(campana.id, {
+        nombre: editFields.nombre.trim(),
+        descripcion: editFields.descripcion.trim() || undefined,
+        plantilla: editFields.plantilla,
+      });
+      setCampana(updated);
+      const ps = await getPlantillas();
+      setPlantilla(ps.find((p) => p.id === updated.plantilla) ?? null);
+      setEditMode(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al guardar los cambios.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSendOne = async (sendId: number) => {
     setSendingId(sendId);
     try {
       await sendCampaignSend(sendId);
       await loadSends();
-    } catch {
-      alert("Error al enviar.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al enviar.");
     } finally {
       setSendingId(null);
     }
@@ -138,8 +182,8 @@ export function CampaignDetailView({ campanaId }: Props) {
       const res = await sendBulk(campanaId);
       alert(`Enviados: ${res.enviados} / ${res.total}. Errores: ${res.errores}`);
       await loadSends();
-    } catch {
-      alert("Error en el envío masivo.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error en el envío masivo.");
     } finally {
       setSendingBulk(false);
     }
@@ -151,8 +195,8 @@ export function CampaignDetailView({ campanaId }: Props) {
     try {
       await deleteCampaignSend(id);
       setSends((prev) => prev.filter((s) => s.id !== id));
-    } catch {
-      alert("Error al eliminar.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar.");
     } finally {
       setDeletingId(null);
     }
@@ -170,8 +214,8 @@ export function CampaignDetailView({ campanaId }: Props) {
       setShowModal(false);
       setSelectedClientes([]);
       await loadSends();
-    } catch {
-      alert("Error al asignar clientes.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al asignar clientes.");
     } finally {
       setAssigning(false);
     }
@@ -207,7 +251,7 @@ export function CampaignDetailView({ campanaId }: Props) {
   return (
     <div className="flex min-h-full flex-col overflow-auto pr-1">
       {/* Nav */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
         <Link href="/dashboard/campanas">
           <Button
             type="button"
@@ -218,24 +262,107 @@ export function CampaignDetailView({ campanaId }: Props) {
             Volver a campañas
           </Button>
         </Link>
+        {!editMode && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-2 border-border px-3 text-sm font-medium text-figma-table hover:bg-muted"
+            onClick={openEdit}
+          >
+            <Pencil className="size-3.5" />
+            Editar campaña
+          </Button>
+        )}
       </div>
 
       {/* Header campaña */}
       <div className="mt-6 border-b border-border/70 pb-6">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
-          Campaña
-        </p>
-        <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-figma-table md:text-3xl">
-          {campana.nombre}
-        </h1>
-        {campana.descripcion && (
-          <p className="mt-2 text-sm text-figma-placeholder">{campana.descripcion}</p>
-        )}
-        {plantilla && (
-          <p className="mt-3 text-xs text-figma-placeholder">
-            Plantilla:{" "}
-            <span className="font-medium text-figma-table">{plantilla.nombre}</span>
-          </p>
+        {editMode ? (
+          <div className="space-y-4">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Editando campaña
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-nombre" className="text-xs font-medium text-figma-table">Nombre</label>
+                <input
+                  id="edit-nombre"
+                  type="text"
+                  value={editFields.nombre}
+                  onChange={(e) =>
+                    setEditFields((f) => ({ ...f, nombre: e.target.value }))
+                  }
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-figma-table focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit-plantilla" className="text-xs font-medium text-figma-table">Plantilla</label>
+                <select
+                  id="edit-plantilla"
+                  value={editFields.plantilla}
+                  onChange={(e) =>
+                    setEditFields((f) => ({ ...f, plantilla: Number(e.target.value) }))
+                  }
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-figma-table focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  {plantillas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-descripcion" className="text-xs font-medium text-figma-table">Descripción</label>
+              <textarea
+                id="edit-descripcion"
+                value={editFields.descripcion}
+                onChange={(e) =>
+                  setEditFields((f) => ({ ...f, descripcion: e.target.value }))
+                }
+                rows={2}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-figma-table focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                className="h-9 px-5 text-sm font-medium"
+                disabled={saving || !editFields.nombre.trim()}
+                onClick={handleSaveEdit}
+              >
+                {saving ? "Guardando…" : "Guardar cambios"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 gap-1.5 px-4 text-sm text-figma-placeholder"
+                onClick={() => setEditMode(false)}
+              >
+                <X className="size-3.5" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Campaña
+            </p>
+            <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-figma-table md:text-3xl">
+              {campana.nombre}
+            </h1>
+            {campana.descripcion && (
+              <p className="mt-2 text-sm text-figma-placeholder">{campana.descripcion}</p>
+            )}
+            {plantilla && (
+              <p className="mt-3 text-xs text-figma-placeholder">
+                Plantilla:{" "}
+                <span className="font-medium text-figma-table">{plantilla.nombre}</span>
+              </p>
+            )}
+          </>
         )}
       </div>
 

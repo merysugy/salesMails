@@ -52,7 +52,7 @@ function mapClienteAPI(c: ClienteAPI): Cliente {
       ? new Date(c.fecha_creacion).toLocaleDateString("es-ES")
       : "",
     ultimoContacto: "",
-    emailsEnviados: 0,
+    emailsEnviados: c.emails_enviados ?? 0,
   };
 }
 

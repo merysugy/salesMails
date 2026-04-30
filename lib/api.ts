@@ -2,6 +2,27 @@
 // Tipos del backend
 // =========================================================
 
+export type UserAPI = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  fecha_creacion: string;
+};
+
+export async function getCurrentUser(): Promise<UserAPI> {
+  return api<UserAPI>("/api/users/me/");
+}
+
+export async function updateCurrentUser(
+  data: Partial<Pick<UserAPI, "email" | "first_name" | "last_name">>,
+): Promise<UserAPI> {
+  return api<UserAPI>("/api/users/me/", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export type ClienteAPI = {
   id: number;
   nombre: string;

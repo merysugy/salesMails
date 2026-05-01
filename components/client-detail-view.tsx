@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Mail, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Sparkles, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -374,6 +374,17 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
                 >
                   Editar
                 </Button>
+                <Link href={`/dashboard/oportunidades/nueva?cliente=${cliente.id}`}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
+                  >
+                    <TrendingUp className="size-3" />
+                    Crear oportunidad
+                  </Button>
+                </Link>
                 <Button
                   type="button"
                   variant="destructive"

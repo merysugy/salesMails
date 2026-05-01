@@ -338,3 +338,73 @@ export async function sendBulk(campana_id?: number): Promise<SendBulkResponse> {
     body: JSON.stringify(campana_id ? { campana_id } : {}),
   });
 }
+
+// =========================================================
+// Oportunidades comerciales (CRM)
+// =========================================================
+
+export type OportunidadAPI = {
+  id: number;
+  titulo: string;
+  descripcion: string | null;
+  valor_estimado: string | null;
+  estado: "abierta" | "en_progreso" | "ganada" | "perdida";
+  probabilidad: number | null;
+  fecha_creacion: string;
+  fecha_cierre_prevista: string | null;
+  cliente: number;
+  cliente_detalle: {
+    id: number;
+    nombre: string;
+  } | null;
+  usuario_responsable: number;
+  campaign_send: number | null;
+  empresa: string;
+};
+
+export async function getOportunidades(
+  cliente_id?: number,
+): Promise<OportunidadAPI[]> {
+  const qs = cliente_id ? `?cliente=${cliente_id}` : "";
+  return api<OportunidadAPI[]>(`/api/oportunidades/${qs}`);
+}
+
+export async function getOportunidadById(id: number): Promise<OportunidadAPI> {
+  return api<OportunidadAPI>(`/api/oportunidades/${id}/`);
+}
+
+export async function createOportunidad(data: {
+  titulo: string;
+  cliente: number;
+  descripcion?: string;
+  valor_estimado?: string;
+  estado?: OportunidadAPI["estado"];
+  probabilidad?: number;
+  fecha_cierre_prevista?: string;
+}): Promise<OportunidadAPI> {
+  return api<OportunidadAPI>("/api/oportunidades/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateOportunidad(
+  id: number,
+  data: Partial<{
+    titulo: string;
+    descripcion: string;
+    valor_estimado: string;
+    estado: OportunidadAPI["estado"];
+    probabilidad: number;
+    fecha_cierre_prevista: string;
+  }>,
+): Promise<OportunidadAPI> {
+  return api<OportunidadAPI>(`/api/oportunidades/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteOportunidad(id: number): Promise<void> {
+  return api<void>(`/api/oportunidades/${id}/`, { method: "DELETE" });
+}

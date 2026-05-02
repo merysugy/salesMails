@@ -385,6 +385,17 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
                     Crear oportunidad
                   </Button>
                 </Link>
+                <Link href={`/dashboard/correo/enviar?clientes=${cliente.id}`}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-border px-3 text-xs font-medium text-figma-table hover:bg-muted"
+                  >
+                    <Mail className="size-3" />
+                    Enviar correo
+                  </Button>
+                </Link>
                 <Button
                   type="button"
                   variant="destructive"

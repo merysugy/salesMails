@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { sendDirectEmail, getPlantillas, getClienteById, type PlantillaEmailAPI } from "@/lib/api";
+import { sendDirectEmail, getPlantillas, getClientes, type PlantillaEmailAPI, type ClienteAPI } from "@/lib/api";
 
 export function SendEmailView() {
   const searchParams = useSearchParams();
@@ -20,7 +20,6 @@ export function SendEmailView() {
 
   const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
   const [plantillaId, setPlantillaId] = useState<number | null>(null);
-  const [previewNombre, setPreviewNombre] = useState<string | null>(null);
   const [asunto, setAsunto] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [sending, setSending] = useState(false);
@@ -30,19 +29,15 @@ export function SendEmailView() {
     errores: { cliente_id: number; error: string }[];
   } | null>(null);
 
+  // Selector de clientes (solo cuando no vienen por URL)
+  const [clientes, setClientes] = useState<ClienteAPI[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [busqueda, setBusqueda] = useState("");
+
   useEffect(() => {
     getPlantillas().then(setPlantillas).catch(() => {});
+    getClientes().then(setClientes).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (clienteIds.length === 0) return;
-
-    setPreviewNombre(null);
-
-    getClienteById(String(clienteIds[0]))
-      .then((c) => setPreviewNombre(c.nombre))
-      .catch(() => setPreviewNombre(null));
-  }, [clienteIds]);
 
   const handleSelectPlantilla = (id: number) => {
     const plantilla = plantillas.find((p) => p.id === id);
@@ -52,9 +47,65 @@ export function SendEmailView() {
     setMensaje(plantilla.cuerpo);
   };
 
+  const clienteIdsFinal = clienteIds.length > 0 ? clienteIds : [...selectedIds];
+
+  const toggleCliente = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clientesFiltrados = clientes.filter((c) =>
+    c.nombre.toLowerCase().includes(busqueda.toLowerCase()),
+  );
+
+  // Nombre del primer destinatario para la preview
+  const previewNombre =
+    clienteIdsFinal.length > 0
+      ? (clientes.find((c) => c.id === clienteIdsFinal[0])?.nombre ?? null)
+      : null;
+
+  const clientesListContent = () => {
+    if (clientes.length === 0) {
+      return <p className="py-2 text-sm text-figma-placeholder">Cargando clientes…</p>;
+    }
+    if (clientesFiltrados.length === 0) {
+      return <p className="py-2 text-sm text-figma-placeholder">Sin resultados.</p>;
+    }
+    return (
+      <ul className="max-h-52 overflow-y-auto space-y-1">
+        {clientesFiltrados.map((c) => (
+          <li key={c.id}>
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm text-figma-table hover:bg-figma-accent/10">
+              <input
+                type="checkbox"
+                checked={selectedIds.has(c.id)}
+                onChange={() => toggleCliente(c.id)}
+                className="size-3.5 accent-figma-table"
+              />
+              {c.nombre}
+              {c.email && (
+                <span className="ml-auto text-xs text-figma-placeholder">{c.email}</span>
+              )}
+            </label>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  const previewFooterText = () => {
+    if (previewNombre) return `Previsualización con nombre real: ${previewNombre}.`;
+    if (clienteIdsFinal.length > 0) return "Previsualización sin nombre (usa {{nombre}} para personalizar).";
+    return "Selecciona un cliente para ver la previsualización con nombre real.";
+  };
+
   const handleSend = async () => {
-    if (clienteIds.length === 0) {
-      alert("No hay clientes seleccionados. Vuelve al listado y selecciona clientes.");
+    if (clienteIdsFinal.length === 0) {
+      alert("Selecciona al menos un cliente antes de enviar.");
       return;
     }
     if (!asunto.trim() || !mensaje.trim()) {
@@ -67,24 +118,28 @@ export function SendEmailView() {
 
     try {
       const res = await sendDirectEmail({
-        cliente_ids: clienteIds,
+        cliente_ids: clienteIdsFinal,
         ...(plantillaId ? { plantilla_id: plantillaId } : {}),
         asunto: asunto.trim(),
         mensaje: mensaje.trim(),
       });
       setResult(res);
-    } catch {
-      alert("Error al enviar el correo. Comprueba tu sesión.");
+    } catch (err) {
+      alert(`Error al enviar: ${err instanceof Error ? err.message : "Error desconocido"}`);
     } finally {
       setSending(false);
     }
   };
 
-  const plural = clienteIds.length === 1 ? "" : "s";
-  const subtitulo =
-    clienteIds.length > 0
-      ? `Se enviará a ${clienteIds.length} cliente${plural} seleccionado${plural}.`
-      : "No hay clientes seleccionados. Vuelve al listado para seleccionarlos.";
+  const plural = clienteIdsFinal.length === 1 ? "" : "s";
+  let subtitulo: string;
+  if (clienteIds.length > 0) {
+    subtitulo = `Se enviará a ${clienteIds.length} cliente${plural} seleccionado${plural}.`;
+  } else if (clienteIdsFinal.length > 0) {
+    subtitulo = `${clienteIdsFinal.length} cliente${plural} seleccionado${plural}.`;
+  } else {
+    subtitulo = "Selecciona los destinatarios a continuación.";
+  }
 
   const asuntoPreview = previewNombre
     ? asunto.replace("{{nombre}}", previewNombre)
@@ -93,6 +148,15 @@ export function SendEmailView() {
     ? mensaje.replace("{{nombre}}", previewNombre)
     : mensaje;
   const mostrarPreview = asunto.trim() !== "" || mensaje.trim() !== "";
+
+  const resultText = () => {
+    if (!result) return "";
+    if (result.errores.length === 0) {
+      const p = result.enviados === 1 ? "" : "s";
+      return `\u2713 ${result.enviados} correo${p} enviado${p} correctamente.`;
+    }
+    return `${result.enviados} de ${result.total} correos enviados correctamente.`;
+  };
 
   return (
     <div className="flex min-h-full flex-col overflow-auto pr-1">
@@ -123,26 +187,23 @@ export function SendEmailView() {
           </p>
         </div>
 
-        {/* Resultado del envío */}
-        {result && (
-          <div
-            className={`mt-6 rounded-2xl border px-5 py-4 text-sm ${
-              result.errores.length === 0
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-amber-200 bg-amber-50 text-amber-800"
-            }`}
-          >
-            <p className="font-semibold">
-              {result.enviados} de {result.total} emails enviados correctamente.
+        {/* Selector de clientes (solo cuando no vienen por URL) */}
+        {clienteIds.length === 0 && (
+          <div className="mt-6 space-y-3 rounded-2xl border border-figma-accent/50 bg-figma-shell/55 p-4">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
+              Destinatarios
             </p>
-            {result.errores.length > 0 && (
-              <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
-                {result.errores.map((e) => (
-                  <li key={e.cliente_id}>
-                    Cliente #{e.cliente_id}: {e.error}
-                  </li>
-                ))}
-              </ul>
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar cliente…"
+              className="w-full rounded-xl border border-figma-accent/40 bg-white/60 px-3 py-2 text-sm text-figma-table outline-none focus:border-figma-accent"
+            />
+            {clientesListContent()}
+            {selectedIds.size > 0 && (
+              <p className="text-xs text-figma-placeholder">
+                {selectedIds.size} cliente{selectedIds.size === 1 ? "" : "s"} seleccionado{selectedIds.size === 1 ? "" : "s"}.
+              </p>
             )}
           </div>
         )}
@@ -229,11 +290,7 @@ export function SendEmailView() {
                   {mensajePreview || <span className="text-figma-placeholder italic">El mensaje aparecerá aquí…</span>}
                 </p>
               </div>
-              <p className="text-xs text-figma-placeholder">
-                {previewNombre
-                  ? `Previsualización con nombre real: ${previewNombre}.`
-                  : "Cargando nombre del cliente…"}
-              </p>
+              <p className="text-xs text-figma-placeholder">{previewFooterText()}</p>
             </div>
           )}
         </div>
@@ -243,7 +300,7 @@ export function SendEmailView() {
           <Button
             type="button"
             onClick={handleSend}
-            disabled={sending || clienteIds.length === 0}
+            disabled={sending || clienteIdsFinal.length === 0}
             className="h-9 gap-2 bg-figma-table px-4 text-sm font-medium text-white hover:bg-figma-table/90 disabled:opacity-50"
           >
             {sending ? (
@@ -255,7 +312,7 @@ export function SendEmailView() {
               <>
                 <Send className="size-3.5" />
                 Enviar correo
-                {clienteIds.length > 0 ? ` (${clienteIds.length})` : ""}
+                {clienteIdsFinal.length > 0 ? ` (${clienteIdsFinal.length})` : ""}
               </>
             )}
           </Button>
@@ -270,6 +327,28 @@ export function SendEmailView() {
             </Button>
           </Link>
         </div>
+
+        {/* Resultado del envío */}
+        {result && (
+          <div
+            className={`mt-6 rounded-2xl border px-5 py-4 text-sm ${
+              result.errores.length === 0
+                ? "border-green-200 bg-green-50 text-green-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
+          >
+            <p className="font-semibold">{resultText()}</p>
+            {result.errores.length > 0 && (
+              <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
+                {result.errores.map((e) => (
+                  <li key={e.cliente_id}>
+                    Cliente #{e.cliente_id}: {e.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

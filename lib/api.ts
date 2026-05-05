@@ -168,6 +168,54 @@ export async function getClienteActividad(
   return api<ActividadClienteAPI[]>(`/api/clients/${id}/activity/`);
 }
 
+// =========================================================
+// Actividades CRM (manuales)
+// =========================================================
+
+export type ActividadAPI = {
+  id: number;
+  tipo: "llamada" | "email" | "reunion" | "tarea";
+  descripcion: string;
+  fecha: string;
+  completada: boolean;
+  cliente: number | null;
+  oportunidad: number | null;
+};
+
+export async function getActividades(clienteId?: number): Promise<ActividadAPI[]> {
+  const query = clienteId ? `?cliente=${clienteId}` : "";
+  return api<ActividadAPI[]>(`/api/actividades/${query}`);
+}
+
+export async function createActividad(data: {
+  tipo: string;
+  descripcion: string;
+  fecha: string;
+  cliente?: number;
+  oportunidad?: number;
+}): Promise<ActividadAPI> {
+  return api<ActividadAPI>("/api/actividades/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateActividad(
+  id: number,
+  data: Partial<ActividadAPI>,
+): Promise<ActividadAPI> {
+  return api<ActividadAPI>(`/api/actividades/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteActividad(id: number): Promise<void> {
+  return api<void>(`/api/actividades/${id}/`, {
+    method: "DELETE",
+  });
+}
+
 export async function getClientesInactivos(): Promise<ClienteAPI[]> {
   return api<ClienteAPI[]>("/api/clients/inactive/");
 }

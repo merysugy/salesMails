@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getClienteById, updateCliente, deleteCliente, getEstadosCliente, getClienteActividad, type ClienteAPI, type EstadoClienteAPI, type ActividadClienteAPI } from "@/lib/api";
+import { getClienteById, updateCliente, deleteCliente, getEstadosCliente, getClienteActividad, getActividades, createActividad, updateActividad, deleteActividad, type ClienteAPI, type EstadoClienteAPI, type ActividadClienteAPI, type ActividadAPI } from "@/lib/api";
 
 function statusAccent(estado: string): string {
   switch (estado) {
@@ -156,7 +156,14 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [estados, setEstados] = useState<EstadoClienteAPI[]>([]);
-  const [actividades, setActividades] = useState<ActividadClienteAPI[]>([]);
+  const [actividadesManual, setActividadesManual] = useState<ActividadAPI[]>([]);
+  const [actividadLog, setActividadLog] = useState<ActividadClienteAPI[]>([]);
+  const [actForm, setActForm] = useState({
+    tipo: "llamada" as ActividadAPI["tipo"],
+    descripcion: "",
+    fecha: new Date().toISOString().split("T")[0],
+  });
+  const [actSaving, setActSaving] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     email: "",
@@ -204,7 +211,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
         estadoCliente: mapped.estadoCliente,
       });
       setEditing(false);
-      getClienteActividad(cliente.id).then(setActividades).catch(() => {});
+      getClienteActividad(cliente.id).then(setActividadLog).catch(() => {});
       alert("Cliente actualizado correctamente");
     } catch {
       alert("Error al guardar los cambios");
@@ -238,15 +245,67 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
     }
   };
 
+  const handleAddActividad = async () => {
+    if (!actForm.descripcion.trim() || !cliente) return;
+    setActSaving(true);
+    try {
+      await createActividad({
+        tipo: actForm.tipo,
+        descripcion: actForm.descripcion.trim(),
+        fecha: actForm.fecha,
+        cliente: Number(cliente.id),
+      });
+      const updated = await getActividades(Number(cliente.id));
+      setActividadesManual(updated);
+      setActForm({ tipo: "llamada", descripcion: "", fecha: new Date().toISOString().split("T")[0] });
+    } catch (error) {
+      console.error("Error al añadir actividad:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Error al añadir la actividad",
+      );
+    } finally {
+      setActSaving(false);
+    }
+  };
+
+  const handleCompleteActividad = async (actId: number) => {
+    try {
+      await updateActividad(actId, { completada: true });
+      setActividadesManual((prev) =>
+        prev.map((a) => (a.id === actId ? { ...a, completada: true } : a)),
+      );
+    } catch {
+      alert("Error al completar la actividad");
+    }
+  };
+
+  const handleDeleteActividad = async (actId: number) => {
+    if (!confirm("¿Eliminar esta actividad?")) return;
+    try {
+      await deleteActividad(actId);
+      setActividadesManual((prev) => prev.filter((a) => a.id !== actId));
+    } catch {
+      alert("Error al eliminar la actividad");
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     setError(false);
-    Promise.all([getClienteById(id), getEstadosCliente(), getClienteActividad(id)])
-      .then(([clienteData, estadosData, actividadesData]) => {
+    Promise.all([
+      getClienteById(id),
+      getEstadosCliente(),
+      getActividades(Number(id)).catch(() => [] as ActividadAPI[]),
+      getClienteActividad(id).catch(() => [] as ActividadClienteAPI[]),
+    ])
+      .then(([clienteData, estadosData, actividadesData, logData]) => {
         const mapped = mapClienteAPI(clienteData);
         setCliente(mapped);
         setEstados(estadosData);
-        setActividades(actividadesData);
+        setActividadesManual(actividadesData);
+        setActividadLog(logData);
         setForm({
           nombre: mapped.nombre,
           email: mapped.email,
@@ -511,24 +570,143 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
             Actividad reciente
           </p>
-          {actividades.length === 0 ? (
-            <p className="mt-4 text-sm text-figma-placeholder">Sin actividad registrada.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {actividades.map((act) => (
-                <li key={act.id} className="flex items-start gap-3">
-                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-figma-placeholder" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-figma-table">{act.descripcion}</p>
-                    <p className="mt-0.5 text-xs text-figma-placeholder">
-                      {new Date(act.fecha_creacion).toLocaleString("es-ES")}
-                      {act.usuario_nombre ? ` · ${act.usuario_nombre}` : ""}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
+                Tipo
+              </p>
+              <select
+                value={actForm.tipo}
+                onChange={(e) =>
+                  setActForm((f) => ({ ...f, tipo: e.target.value as ActividadAPI["tipo"] }))
+                }
+                className="rounded-xl border border-border/80 bg-figma-shell/55 px-3 py-2 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+              >
+                <option value="llamada">Llamada</option>
+                <option value="email">Email</option>
+                <option value="reunion">Reunión</option>
+                <option value="tarea">Tarea</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
+                Descripción
+              </p>
+              <input
+                value={actForm.descripcion}
+                onChange={(e) => setActForm((f) => ({ ...f, descripcion: e.target.value }))}
+                placeholder="Describe la actividad…"
+                className="w-full rounded-xl border border-border/80 bg-figma-shell/55 px-3 py-2 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
+                Fecha
+              </p>
+              <input
+                type="date"
+                value={actForm.fecha}
+                onChange={(e) => setActForm((f) => ({ ...f, fecha: e.target.value }))}
+                className="rounded-xl border border-border/80 bg-figma-shell/55 px-3 py-2 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={actSaving || !actForm.descripcion.trim()}
+              onClick={handleAddActividad}
+              className="h-9 bg-figma-table px-3 text-xs font-medium text-white hover:bg-figma-table/90"
+            >
+              {actSaving ? "Añadiendo…" : "Añadir actividad"}
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
+                Actividades manuales
+              </p>
+              {actividadesManual.length === 0 ? (
+                <p className="mt-3 text-sm text-figma-placeholder">Sin actividades manuales.</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {actividadesManual.map((act) => (
+                    <li key={act.id} className="flex items-start gap-3">
+                      <span
+                        className={cn(
+                          "mt-1.5 size-2 shrink-0 rounded-full",
+                          act.completada ? "bg-kpi-green" : "bg-figma-placeholder",
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full border border-border/60 bg-figma-shell px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-figma-placeholder">
+                            {act.tipo}
+                          </span>
+                          {act.completada && (
+                            <span className="text-[0.65rem] font-medium text-kpi-green">
+                              completada
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm text-figma-table">{act.descripcion}</p>
+                        <p className="mt-0.5 text-xs text-figma-placeholder">
+                          {new Date(act.fecha).toLocaleDateString("es-ES")}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        {!act.completada && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCompleteActividad(act.id)}
+                            className="h-7 border-border px-2 text-xs text-figma-table hover:bg-muted"
+                          >
+                            Completar
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteActividad(act.id)}
+                          className="h-7 border-border px-2 text-xs text-red-500 hover:bg-red-50"
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
+                Historial automático
+              </p>
+              {actividadLog.length === 0 ? (
+                <p className="mt-3 text-sm text-figma-placeholder">Sin historial registrado.</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {actividadLog.map((log) => (
+                    <li key={log.id} className="flex items-start gap-3">
+                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-figma-placeholder" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-figma-table">{log.descripcion}</p>
+                        <p className="mt-0.5 text-xs text-figma-placeholder">
+                          {new Date(log.fecha_creacion).toLocaleString("es-ES")}
+                          {log.usuario_nombre ? ` · ${log.usuario_nombre}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

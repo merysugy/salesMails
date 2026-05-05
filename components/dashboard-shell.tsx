@@ -1,14 +1,15 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Mail, Settings, Sparkles } from "lucide-react";
+import { LayoutDashboard, Mail, Megaphone, Settings, Sparkles, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { logoutAction } from "@/app/actions/auth";
 import { AppLogoMark } from "@/components/app-logo-mark";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -20,6 +21,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
   { href: "/dashboard/correo", label: "Correo", icon: Mail },
+  { href: "/dashboard/campanas", label: "Campañas", icon: Megaphone },
+  { href: "/dashboard/oportunidades", label: "Oportunidades", icon: TrendingUp },
   {
     href: "/dashboard/noticias/interesantes",
     label: "Funciones IA",
@@ -60,6 +63,17 @@ function NavItemButton({
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [userName, setUserName] = useState<string>("...");
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((u) => {
+        setUserName(u.first_name || u.email);
+      })
+      .catch(() => {
+        setUserName("Usuario");
+      });
+  }, []);
 
   return (
     <div className="font-dashboard grid h-full min-h-0 grid-cols-[4.75rem_1fr] grid-rows-[auto_1fr] overflow-hidden bg-figma-shell text-figma-table lg:grid-cols-[5.5rem_1fr]">
@@ -95,7 +109,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       <header className="flex min-w-0 flex-wrap items-center justify-end gap-3 bg-brand-shell-warm px-6 py-5 md:gap-5 md:px-10">
         <p className="font-display text-lg font-semibold tracking-tight text-figma-table">
-          Bienvenida, María
+          Bienvenida, {userName}
         </p>
         <form action={logoutAction}>
           <Button

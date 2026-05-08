@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { getClientes, getClientesInactivos, restoreCliente, getEstadosCliente, type ClienteAPI } from "@/lib/api";
+import { getClientes, getEstadosCliente, type ClienteAPI } from "@/lib/api";
 
 type Cliente = {
   id: string;
@@ -114,16 +114,12 @@ function ClientesTableBody({
   filteredClientes,
   selectedClientes,
   onToggleCliente,
-  showInactive,
-  onRestore,
 }: Readonly<{
   loading: boolean;
   error: boolean;
   filteredClientes: Cliente[];
   selectedClientes: string[];
   onToggleCliente: (id: string, checked: boolean | "indeterminate") => void;
-  showInactive: boolean;
-  onRestore: (id: string) => Promise<void>;
 }>) {
   if (loading) {
     return (
@@ -205,28 +201,16 @@ function ClientesTableBody({
         {c.emailsEnviados}
       </TableCell>
       <TableCell className="py-3 text-right">
-        {showInactive ? (
+        <Link href={`/dashboard/clientes/${c.id}`}>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => onRestore(c.id)}
             className="h-7 border-border px-2.5 text-[11px] font-medium text-figma-table hover:bg-muted"
           >
-            Restaurar
+            Ficha
           </Button>
-        ) : (
-          <Link href={`/dashboard/clientes/${c.id}`}>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 border-border px-2.5 text-[11px] font-medium text-figma-table hover:bg-muted"
-            >
-              Ficha
-            </Button>
-          </Link>
-        )}
+        </Link>
       </TableCell>
     </TableRow>
   ));
@@ -259,7 +243,6 @@ export function DashboardView() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [showInactive, setShowInactive] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -274,28 +257,18 @@ export function DashboardView() {
   useEffect(() => {
     setLoading(true);
     setError(false);
-    const fetch = showInactive ? getClientesInactivos : getClientes;
-    fetch()
+    getClientes()
       .then((data) => setClientes(data.map(mapClienteAPI)))
       .catch(() => {
         setError(true);
         setClientes([]);
       })
       .finally(() => setLoading(false));
-  }, [showInactive]);
+  }, []);
 
   useEffect(() => {
     getEstadosCliente().then((data) => setEstadosFilter(data.map((e) => e.nombre)));
   }, []);
-
-  const handleRestore = async (id: string) => {
-    try {
-      await restoreCliente(id);
-      setClientes((current) => current.filter((c) => c.id !== id));
-    } catch {
-      alert("Error al restaurar el cliente");
-    }
-  };
 
   const localidadesDisponibles = useMemo(
     () => [...new Set(clientes.map((c) => c.localidad).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
@@ -515,19 +488,6 @@ export function DashboardView() {
             {selectedEstados.length > 0 ? ` (${selectedEstados.length})` : ""}
           </Button>
           <div className="ml-auto flex w-full justify-end gap-2 sm:w-auto">
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              aria-pressed={showInactive}
-              onClick={() => {
-                setShowInactive((current) => !current);
-                setClientes([]);
-              }}
-              className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
-            >
-              {showInactive ? "Ver activos" : "Ver inactivos"}
-            </Button>
             <Link href="/dashboard/clientes/nuevo">
               <Button
                 type="button"
@@ -588,7 +548,7 @@ export function DashboardView() {
                   className={cn(
                     "h-8 rounded-full border px-3 text-xs font-medium",
                     isActive
-                      ? "border-figma-table bg-figma-table text-white hover:bg-figma-table/90"
+                      ? "border-figma-table bg-figma-table text-white hover:bg-figma-table/90 hover:text-white"
                       : "border-border bg-transparent text-figma-table hover:bg-muted",
                   )}
                 >
@@ -742,8 +702,6 @@ export function DashboardView() {
               filteredClientes={filteredClientes}
               selectedClientes={selectedClientes}
               onToggleCliente={toggleClienteSelection}
-              showInactive={showInactive}
-              onRestore={handleRestore}
             />
           </TableBody>
         </Table>

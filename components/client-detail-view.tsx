@@ -102,7 +102,7 @@ function EditableField({
       <input
         value={inputValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent h-11 min-h-11"
       />
     </div>
   );
@@ -132,7 +132,7 @@ function EditableSelect({
       <select
         value={selectValue}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent"
+        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent h-11 min-h-11"
       >
         <option value={0} disabled>
           Selecciona estado

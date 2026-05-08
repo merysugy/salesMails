@@ -72,7 +72,7 @@ function Field({
       <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
         {label}
       </p>
-      <div className="rounded-2xl border border-border/80 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm h-11 min-h-11">
+      <div className="rounded-2xl border border-border/80 px-4 py-3 text-sm font-medium text-figma-table h-11 min-h-11">
         {value}
       </div>
     </div>
@@ -101,7 +101,7 @@ function EditableField({
       <input
         value={inputValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent h-11 min-h-11"
+        className="w-full rounded-2xl border border-figma-accent/50 px-4 py-3 text-sm font-medium text-figma-table outline-none focus:border-figma-accent h-11 min-h-11"
       />
     </div>
   );
@@ -131,7 +131,7 @@ function EditableSelect({
       <select
         value={selectValue}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full rounded-2xl border border-figma-accent/50 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm outline-none focus:border-figma-accent h-11 min-h-11"
+        className="w-full rounded-2xl border border-figma-accent/50 px-4 py-3 text-sm font-medium text-figma-table outline-none focus:border-figma-accent h-11 min-h-11"
       >
         <option value={0} disabled>
           Selecciona estado

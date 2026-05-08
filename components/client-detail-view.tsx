@@ -382,7 +382,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
 
           <div className="flex flex-wrap gap-3">
             <Badge
-              className="gap-2 rounded-full border border-border/70 bg-figma-shell/70 px-3 py-1.5 text-figma-table"
+              className="gap-2 rounded-full border border-border/70 bg-figma-shell/70 px-3 h-8 text-figma-table"
               variant="outline"
             >
               <span
@@ -394,7 +394,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
               {cliente.estado}
             </Badge>
             <Badge
-              className="rounded-full border border-border/70 bg-figma-shell/70 px-3 py-1.5 text-figma-table"
+              className="rounded-full border border-border/70 bg-figma-shell/70 px-3 h-8 text-figma-table"
               variant="outline"
             >
               ID {cliente.id}

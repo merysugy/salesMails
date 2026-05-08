@@ -72,7 +72,7 @@ function Field({
       <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
         {label}
       </p>
-      <div className="rounded-2xl border border-border/80 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm">
+      <div className="rounded-2xl border border-border/80 bg-figma-shell/55 px-4 py-3 text-sm font-medium text-figma-table shadow-sm h-11 min-h-11">
         {value}
       </div>
     </div>

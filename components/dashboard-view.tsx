@@ -437,23 +437,16 @@ export function DashboardView() {
         </p>
       </div>
 
-      <div className="mt-6 grid shrink-0 gap-5 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
         {filteredKpis.map((k) => (
-          <div key={k.label} className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-figma-placeholder">
-                {k.label}
-              </p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-figma-table">
-                {k.value}
-              </p>
-            </div>
-            <span
-              className={cn(
-                "mt-2 size-2 shrink-0 rounded-full",
-                kpiDotClass[k.dot],
-              )}
-            />
+          <div key={k.label} className="flex items-center gap-3 rounded-full border border-border px-7">
+            <p className="text-[25px] font-small tabular-nums text-figma-table">
+              {k.value}
+            </p>
+            <p className="whitespace-nowrap text-[13px] font-small text-figma-table">
+              {k.label}
+            </p>
+            <span className={cn("size-4 shrink-0 rounded-full", kpiDotClass[k.dot])} />
           </div>
         ))}
       </div>

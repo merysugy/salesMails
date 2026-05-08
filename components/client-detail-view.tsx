@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowLeft, Mail, MapPin, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowLeft, Mail, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -511,59 +510,6 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
           <Field label="Fecha de inserción" value={cliente.insercion} />
           <Field label="Último contacto" value={cliente.ultimoContacto} />
           <Field label="Emails enviados" value={cliente.emailsEnviados} />
-        </div>
-
-        <div className="mt-8 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-3xl border border-border/70 bg-figma-shell/45 p-5">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
-              Próximo movimiento
-            </p>
-            <h2 className="mt-3 font-display text-xl font-semibold tracking-tight text-figma-table">
-              Preparar seguimiento personalizado
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-figma-placeholder">
-              El historial indica que este contacto encaja con una secuencia de
-              correo centrada en valor sectorial y caso de uso concreto.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/dashboard/correo">
-                <Button className="h-9 gap-2 bg-figma-table px-3 text-sm font-medium text-white hover:bg-figma-table/90">
-                  <Mail className="size-3.5" />
-                  Abrir maquetas
-                </Button>
-              </Link>
-              <Link href="/dashboard/noticias/interesantes">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
-                >
-                  <Sparkles className="size-3.5" />
-                  Ver noticias relevantes
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
-              Resumen rápido
-            </p>
-            <div className="mt-4 space-y-4 text-sm text-figma-table">
-              <div className="flex items-center gap-3">
-                <MapPin className="size-4 text-figma-placeholder" />
-                <span>{cliente.localidad}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="size-4 text-figma-placeholder" />
-                <span>{cliente.email}</span>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-figma-shell/45 p-4 text-figma-placeholder">
-                Lead con {cliente.emailsEnviados} envíos previos y estado actual{" "}
-                <span className="font-medium text-figma-table">{cliente.estado}</span>.
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="mt-8 rounded-3xl border border-border/70 bg-figma-shell/45 p-5">

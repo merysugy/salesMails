@@ -109,7 +109,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       <header className="flex min-w-0 flex-wrap items-center justify-end gap-3 bg-brand-shell-warm px-6 py-5 md:gap-5 md:px-10">
         <p className="font-display text-lg font-semibold tracking-tight text-figma-table">
-          Bienvenida, {userName}
+          ¡Hola! ¿Seguimos donde lo dejaste? {userName}
         </p>
         <form action={logoutAction}>
           <Button

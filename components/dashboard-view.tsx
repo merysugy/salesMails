@@ -406,7 +406,7 @@ export function DashboardView() {
           Clientes
         </h2>
         <p className="mt-1.5 text-sm text-figma-placeholder">
-          Vista resumida del pipeline y últimos contactos.
+          Dashboard del estado de los clientes y últimos contactos.
         </p>
       </div>
 

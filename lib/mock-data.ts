@@ -1,9 +1,3 @@
-import { createTemplateSeed } from "@/lib/email-builder/document";
-import type {
-  EmailRenderData,
-  EmailTemplate,
-  EmailTemplateCategory,
-} from "@/lib/email-builder/types";
 
 export type ClienteEstado =
   | "Clientes nuevos"
@@ -24,7 +18,6 @@ export type Cliente = {
   emailsEnviados: number;
 };
 
-export type { EmailTemplate, EmailTemplateCategory };
 
 export type NewsPriority = "Alta" | "Media" | "Baja";
 
@@ -231,48 +224,6 @@ export const clientesMock: Cliente[] = [
   },
 ];
 
-export const emailTemplatesMock: EmailTemplate[] = [
-  createTemplateSeed({
-    seedKey: "presentacion-consultiva",
-    titulo: "Presentación consultiva",
-    descripcion:
-      "Email de introducción con enfoque en diagnóstico breve y propuesta de llamada.",
-    categoria: "Primer contacto",
-    variante: "amber",
-    destacado: true,
-    status: "published",
-    updatedAt: "2026-03-23T09:00:00.000Z",
-  }),
-  createTemplateSeed({
-    seedKey: "seguimiento-evento",
-    titulo: "Seguimiento tras evento",
-    descripcion:
-      "Plantilla para leads captados en ferias, networking y encuentros comerciales.",
-    categoria: "Seguimiento",
-    variante: "sage",
-    updatedAt: "2026-03-20T11:30:00.000Z",
-  }),
-  createTemplateSeed({
-    seedKey: "caso-uso-sectorial",
-    titulo: "Caso de uso sectorial",
-    descripcion:
-      "Secuencia corta con prueba social y caso de éxito adaptado por industria.",
-    categoria: "Reactivación",
-    variante: "stone",
-    updatedAt: "2026-03-18T15:45:00.000Z",
-  }),
-  createTemplateSeed({
-    seedKey: "cierre-propuesta",
-    titulo: "Cierre con propuesta",
-    descripcion:
-      "Plantilla para siguiente paso comercial con CTA claro y resumen del valor.",
-    categoria: "Cierre",
-    variante: "charcoal",
-    destacado: true,
-    status: "published",
-    updatedAt: "2026-03-25T08:15:00.000Z",
-  }),
-];
 
 export const newsItemsMock: NewsItem[] = [
   {
@@ -332,39 +283,6 @@ export const newsItemsMock: NewsItem[] = [
   },
 ];
 
-export function getClienteById(id: string) {
-  return clientesMock.find((cliente) => cliente.id === id);
-}
-
-export function getClientesByIds(ids: string[]) {
-  return ids
-    .map((id) => getClienteById(id))
-    .filter((cliente): cliente is Cliente => Boolean(cliente));
-}
-
-export function getEmailRenderData(cliente?: Cliente): EmailRenderData {
-  const currentCliente = cliente ?? clientesMock[0];
-
-  return {
-    cliente: {
-      nombre: currentCliente.nombre,
-      empresa: currentCliente.empresa,
-      email: currentCliente.email,
-      localidad: currentCliente.localidad,
-      ultimoContacto: currentCliente.ultimoContacto,
-    },
-    campana: {
-      nombre: "Reactivación B2B Primavera",
-      propuestaValor: "Mensajes más relevantes con menos trabajo manual",
-      remitente: "María Fernández",
-    },
-    empresa: {
-      nombre: "SalesMails",
-      web: "salesmails.app",
-      telefono: "+34 910 000 000",
-    },
-  };
-}
 
 export function getInterestingNews() {
   return newsItemsMock.filter((item) => item.prioridad !== "Baja");

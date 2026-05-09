@@ -7,8 +7,10 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { sendDirectEmail, getPlantillas, getClientes, type PlantillaEmailAPI, type ClienteAPI } from "@/lib/api";
+import { useDialog } from "@/components/providers/dialog-provider";
 
 export function SendEmailView() {
+  const { notify } = useDialog();
   const searchParams = useSearchParams();
 
   const clienteIds =
@@ -139,7 +141,12 @@ export function SendEmailView() {
         asunto: asunto.trim(),
         mensaje: mensaje.trim(),
       });
-      setResult(res);
+      if (res.errores.length === 0) {
+        const p = res.enviados === 1 ? "" : "s";
+        await notify(`${res.enviados} correo${p} enviado${p} correctamente.`);
+      } else {
+        setResult(res);
+      }
     } catch (err) {
       alert(`Error al enviar: ${err instanceof Error ? err.message : "Error desconocido"}`);
     } finally {
@@ -344,25 +351,17 @@ export function SendEmailView() {
           </Link>
         </div>
 
-        {/* Resultado del envío */}
-        {result && (
-          <div
-            className={`mt-6 rounded-2xl border px-5 py-4 text-sm ${
-              result.errores.length === 0
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-amber-200 bg-amber-50 text-amber-800"
-            }`}
-          >
+        {/* Errores parciales del envío */}
+        {result && result.errores.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
             <p className="font-semibold">{resultText()}</p>
-            {result.errores.length > 0 && (
-              <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
-                {result.errores.map((e) => (
-                  <li key={e.cliente_id}>
-                    Cliente #{e.cliente_id}: {e.error}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
+              {result.errores.map((e) => (
+                <li key={e.cliente_id}>
+                  Cliente #{e.cliente_id}: {e.error}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import "./globals.css";
+import { DialogProvider } from "@/components/providers/dialog-provider";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex-sans",
@@ -37,7 +38,7 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body className="flex h-dvh min-h-dvh flex-col overflow-hidden font-sans">
-        {children}
+        <DialogProvider>{children}</DialogProvider>
       </body>
     </html>
   );

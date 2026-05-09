@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarDays, FileText, Megaphone, Plus, Trash2 } from "lucide-react";
+import { useDialog } from "@/components/providers/dialog-provider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -22,6 +23,7 @@ import {
 } from "@/lib/api";
 
 export function CampaignsView() {
+  const { confirm } = useDialog();
   const [campanas, setCampanas] = useState<CampanaEmailAPI[]>([]);
   const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export function CampaignsView() {
     plantillas.find((p) => p.id === id)?.nombre ?? "—";
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar esta campaña? Esta acción no se puede deshacer.")) return;
+    if (!await confirm("¿Eliminar esta campaña? Esta acción no se puede deshacer.")) return;
     setDeleting(id);
     try {
       await deleteCampana(id);

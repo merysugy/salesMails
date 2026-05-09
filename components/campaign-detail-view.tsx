@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useDialog } from "@/components/providers/dialog-provider";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,7 @@ const estadoBadge: Record<
 };
 
 export function CampaignDetailView({ campanaId }: Props) {
+  const { confirm } = useDialog();
   const [campana, setCampana] = useState<CampanaEmailAPI | null>(null);
   const [plantilla, setPlantilla] = useState<PlantillaEmailAPI | null>(null);
   const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
@@ -176,7 +178,7 @@ export function CampaignDetailView({ campanaId }: Props) {
   };
 
   const handleBulk = async () => {
-    if (!confirm("¿Enviar todos los envíos pendientes de esta campaña?")) return;
+    if (!await confirm("¿Enviar todos los envíos pendientes de esta campaña?")) return;
     setSendingBulk(true);
     try {
       const res = await sendBulk(campanaId);
@@ -190,7 +192,7 @@ export function CampaignDetailView({ campanaId }: Props) {
   };
 
   const handleDeleteSend = async (id: number) => {
-    if (!confirm("¿Eliminar este envío?")) return;
+    if (!await confirm("¿Eliminar este envío?")) return;
     setDeletingId(id);
     try {
       await deleteCampaignSend(id);

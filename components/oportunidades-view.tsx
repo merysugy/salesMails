@@ -3,6 +3,7 @@
 import { CircleDollarSign, Plus, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useDialog } from "@/components/providers/dialog-provider";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ const ESTADO_DOT: Record<OportunidadAPI["estado"], string> = {
 };
 
 export function OportunidadesView() {
+  const { confirm } = useDialog();
   const [oportunidades, setOportunidades] = useState<OportunidadAPI[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -63,7 +65,7 @@ export function OportunidadesView() {
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar esta oportunidad? Esta acción no se puede deshacer.")) return;
+    if (!await confirm("¿Eliminar esta oportunidad? Esta acción no se puede deshacer.")) return;
     setDeleting(id);
     try {
       await deleteOportunidad(id);

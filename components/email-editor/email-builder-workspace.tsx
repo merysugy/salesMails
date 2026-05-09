@@ -51,6 +51,7 @@ import {
   type ClienteAPI,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useDialog } from "@/components/providers/dialog-provider";
 
 const STORAGE_KEY = "salesmails.email-builder.templates.v1";
 
@@ -161,6 +162,7 @@ function templateStatusClass(status: EmailTemplate["status"]) {
 }
 
 export function EmailBuilderWorkspace() {
+  const { confirm } = useDialog();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -323,8 +325,7 @@ export function EmailBuilderWorkspace() {
 
   async function deleteTemplate() {
     if (!activeTemplate || templates.length <= 1) return;
-    const confirmed = window.confirm(`Eliminar la plantilla "${activeTemplate.titulo}"?`);
-    if (!confirmed) return;
+    if (!await confirm(`¿Eliminar la plantilla "${activeTemplate.titulo}"?`)) return;
 
     if (activeTemplate.apiId) {
       try {

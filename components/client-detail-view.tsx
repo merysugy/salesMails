@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useDialog } from "@/components/providers/dialog-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,7 @@ function EditableSelect({
 
 export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   const router = useRouter();
+  const { confirm } = useDialog();
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -233,7 +235,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
 
   const handleDelete = async () => {
     if (!cliente) return;
-    if (!confirm("¿Seguro que quieres eliminar este cliente?")) return;
+    if (!await confirm("¿Seguro que quieres eliminar este cliente?")) return;
     setDeleting(true);
     try {
       await deleteCliente(cliente.id);
@@ -281,7 +283,7 @@ export function ClientDetailView({ id }: Readonly<{ id: string }>) {
   };
 
   const handleDeleteActividad = async (actId: number) => {
-    if (!confirm("¿Eliminar esta actividad?")) return;
+    if (!await confirm("¿Eliminar esta actividad?")) return;
     try {
       await deleteActividad(actId);
       setActividadesManual((prev) => prev.filter((a) => a.id !== actId));

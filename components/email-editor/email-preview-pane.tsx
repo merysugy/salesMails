@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Monitor, Smartphone } from "lucide-react";
+import { Copy, Monitor, Send, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,8 @@ type EmailPreviewPaneProps = {
   viewport: EmailViewport;
   onCopyHtml: () => void;
   onViewportChange: (viewport: EmailViewport) => void;
+  onSaveAndSend?: () => void;
+  saving?: boolean;
 };
 
 export function EmailPreviewPane({
@@ -25,6 +27,8 @@ export function EmailPreviewPane({
   viewport,
   onCopyHtml,
   onViewportChange,
+  onSaveAndSend,
+  saving,
 }: EmailPreviewPaneProps) {
   const frameWidth = viewport === "desktop" ? "w-full" : "mx-auto w-[380px] max-w-full";
 
@@ -84,6 +88,18 @@ export function EmailPreviewPane({
               <Copy className="size-3.5" />
               {copied ? "HTML copiado" : "Copiar HTML"}
             </Button>
+            {onSaveAndSend && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={saving}
+                onClick={onSaveAndSend}
+                className="h-8 gap-1.5 rounded-full bg-figma-table px-3 text-xs text-white hover:bg-figma-table/90 disabled:opacity-50"
+              >
+                <Send className="size-3.5" />
+                {saving ? "Guardando…" : "Guardar y enviar"}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>

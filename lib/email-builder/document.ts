@@ -18,7 +18,7 @@ import type {
 
 const defaultTheme = {
   width: 640,
-  backgroundColor: "#f6f0e4",
+  backgroundColor: "#fcfaf6",
   surfaceColor: "#ffffff",
   textColor: "#2a2a2a",
   mutedColor: "#786f62",
@@ -81,7 +81,7 @@ export function createBlock(type: EmailBlockType, idSeed?: string): EmailBlock {
         },
         styles: {
           align: "left",
-          backgroundColor: "#fff7eb",
+          backgroundColor: "#fcfaf6",
           textColor: "#171717",
         },
       };
@@ -126,7 +126,7 @@ export function createBlock(type: EmailBlockType, idSeed?: string): EmailBlock {
         },
         styles: {
           align: "left",
-          backgroundColor: "#f5efe1",
+          backgroundColor: "#fcfaf6",
           buttonColor: "#8b6914",
           buttonTextColor: "#ffffff",
         },

@@ -22,7 +22,6 @@ import { EmailBlockCanvas } from "@/components/email-editor/email-block-canvas";
 import {
   EmailBlockInspectorCard,
   EmailTemplateSettingsCard,
-  EmailVariablesCard,
   EmailVersionsCard,
 } from "@/components/email-editor/email-inspector-pane";
 import { EmailPreviewPane } from "@/components/email-editor/email-preview-pane";
@@ -40,7 +39,7 @@ import {
   removeBlock,
   updateBlockInDocument,
 } from "@/lib/email-builder/document";
-import { emailVariableDefinitions, renderEmailDocument } from "@/lib/email-builder/render";
+import { renderEmailDocument } from "@/lib/email-builder/render";
 import type { EmailBlock, EmailTemplate, EmailViewport } from "@/lib/email-builder/types";
 import type { EmailRenderData } from "@/lib/email-builder/types";
 import {
@@ -574,7 +573,7 @@ export function EmailBuilderWorkspace() {
         </div>
       ) : null}
 
-      {!loadingTemplates && activeTemplate && <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+      {!loadingTemplates && activeTemplate && <Card className="border-border/80 py-0 shadow-none ring-0">
         <CardContent className="space-y-5 p-5">
           {/* Pasos */}
           <div className="grid gap-3 lg:grid-cols-5">
@@ -845,14 +844,6 @@ export function EmailBuilderWorkspace() {
                     />
 
                     <Card className="border-border/80 bg-white py-0 shadow-none ring-0">
-                      <CardHeader className="border-b border-border/70 py-4">
-                        <div className="flex items-center gap-2">
-                          <Users className="size-4 text-figma-placeholder" />
-                          <CardTitle className="font-display text-base text-figma-table">
-                            Audiencia de referencia
-                          </CardTitle>
-                        </div>
-                      </CardHeader>
                       <CardContent className="space-y-3 p-4">
                         {selectedClientes.length > 0 ? (
                           <>
@@ -882,7 +873,6 @@ export function EmailBuilderWorkspace() {
                   </div>
 
                   <div className="space-y-4">
-                    <EmailVariablesCard variableDefinitions={emailVariableDefinitions} />
                     <EmailVersionsCard activeTemplate={activeTemplate} />
                   </div>
                 </div>

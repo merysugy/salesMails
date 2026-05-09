@@ -396,7 +396,7 @@ export function EmailBlockCanvas({
   setDraggingBlockId,
 }: EmailBlockCanvasProps) {
   return (
-    <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+    <Card className="border-border/80 py-0 shadow-none ring-0">
       <CardHeader className="border-b border-border/70 py-4">
         <div className="space-y-1">
           <p className="text-xs text-figma-placeholder">
@@ -404,7 +404,7 @@ export function EmailBlockCanvas({
           </p>
         </div>
       </CardHeader>
-      <CardContent className="bg-[#f5efe4] p-4">
+      <CardContent className=" p-4">
         <div className="rounded-[2rem] border border-border/70 bg-white p-4 shadow-[0_16px_36px_rgba(20,20,20,0.08)]">
           <div className="mb-4 rounded-[1.4rem] border border-border/70 bg-[#fbfaf7] p-4">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">

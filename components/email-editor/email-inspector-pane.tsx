@@ -404,17 +404,7 @@ export function EmailTemplateSettingsCard({
   "activeTemplate" | "onDocumentMetaChange" | "onTemplateMetaChange" | "onThemeChange"
 >) {
   return (
-    <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
-      <CardHeader className="border-b border-border/70 bg-[#faf6ee] py-4">
-        <div>
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
-            Inspector
-          </p>
-          <CardTitle className="font-display text-lg text-figma-table">
-            Ajustes generales
-          </CardTitle>
-        </div>
-      </CardHeader>
+    <Card className="border-border/80 py-0 shadow-none ring-0">
       <CardContent className="space-y-4 p-4">
         <Field
           label="Nombre interno"
@@ -426,11 +416,6 @@ export function EmailTemplateSettingsCard({
           value={activeTemplate.descripcion}
           multiline
           onChange={(value) => onTemplateMetaChange({ descripcion: value })}
-        />
-        <Field
-          label="Asunto interno"
-          value={activeTemplate.document.title}
-          onChange={(value) => onDocumentMetaChange({ title: value })}
         />
         <Field
           label="Preheader"
@@ -490,7 +475,7 @@ export function EmailBlockInspectorCard({
   onBlockChange,
 }: Pick<EmailInspectorPaneProps, "activeBlock" | "onBlockChange">) {
   return (
-    <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+    <Card className="border-border/80 py-0 shadow-none ring-0">
       <CardHeader className="border-b border-border/70 py-4">
         <CardTitle className="font-display text-base text-figma-table">
           Bloque activo
@@ -518,7 +503,7 @@ export function EmailVariablesCard({
   variableDefinitions,
 }: Pick<EmailInspectorPaneProps, "variableDefinitions">) {
   return (
-    <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+    <Card className="border-border/80 py-0 shadow-none ring-0">
       <CardHeader className="border-b border-border/70 py-4">
         <CardTitle className="font-display text-base text-figma-table">
           Variables disponibles
@@ -544,7 +529,7 @@ export function EmailVersionsCard({
   activeTemplate,
 }: Pick<EmailInspectorPaneProps, "activeTemplate">) {
   return (
-    <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+    <Card className="border-border/80 py-0 shadow-none ring-0">
       <CardHeader className="border-b border-border/70 py-4">
         <div className="flex items-center gap-2">
           <History className="size-4 text-figma-placeholder" />

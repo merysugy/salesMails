@@ -231,7 +231,7 @@ export const newsItemsMock: NewsItem[] = [
     titular: "Abalia amplía su cartera de servicios B2B en Iberia",
     fuente: "Expansión",
     resumen:
-      "Movimiento interesante para priorizar un mensaje orientado a escalabilidad y soporte regional.",
+    "Movimiento interesante para priorizar un mensaje orientado a escalabilidad y soporte regional.",
     publicada: "Hoy",
     prioridad: "Alta",
     sector: "Consultoría",

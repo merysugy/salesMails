@@ -13,7 +13,7 @@ export default function Home() {
         <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-figma-accent/35 to-transparent" />
         <div className="absolute bottom-16 left-10 max-w-[20rem] text-pretty">
           <p className="font-display text-2xl leading-snug text-foreground/85 md:text-[1.65rem]">
-            Dale a tus clientes el cuidado que merecen.
+            Convierte tus campañas en oportunidades.
           </p>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
             SalesMails concentra clientes, estados y envíos de forma fácil y sencilla.

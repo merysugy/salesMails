@@ -1,5 +1,4 @@
 import { ArrowUpRight, Search, SlidersHorizontal, Sparkles } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,17 +57,17 @@ function NewsTable({
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id} className="border-border/60 hover:bg-muted/40">
-              <TableCell className="max-w-[280px] py-3 align-top">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-figma-table">
+              <TableCell className="w-[280px] max-w-[280px] py-3 align-top">
+                <div className="w-[260px] space-y-1">
+                  <p className="truncate text-sm font-medium text-figma-table">
                     {item.titular}
                   </p>
-                  <p className="text-xs leading-relaxed text-figma-placeholder">
+                  <p className="truncate text-xs leading-relaxed text-figma-placeholder">
                     {item.resumen}
                   </p>
                 </div>
               </TableCell>
-              <TableCell className="py-3 text-[0.82rem] text-figma-table">
+              <TableCell className="py-3 text-[0.82rem] whitespace-normal text-figma-table">
                 {item.fuente}
               </TableCell>
               <TableCell className="py-3 text-[0.82rem] text-figma-table">
@@ -83,7 +82,7 @@ function NewsTable({
                   className="gap-2 rounded-full border-border/70 bg-figma-shell/60 px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-figma-table"
                 >
                   <span
-                    className={cn("size-2 rounded-full", priorityClass[item.prioridad])}
+                    className={cn("size-2 rounded-full line-clamp-2", priorityClass[item.prioridad])}
                   />
                   {item.prioridad}
                 </Badge>
@@ -114,12 +113,10 @@ function NewsHeader({
   eyebrow,
   title,
   description,
-  accentLabel,
 }: {
   eyebrow: string;
   title: string;
   description: string;
-  accentLabel: string;
 }) {
   return (
     <div className="shrink-0 space-y-2 border-b border-border/70 pb-5">
@@ -127,17 +124,11 @@ function NewsHeader({
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-figma-placeholder">
           {eyebrow}
         </p>
-        <Badge
-          variant="outline"
-          className="rounded-full border-border/70 bg-figma-shell/60 px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.14em] text-figma-accent"
-        >
-          {accentLabel}
-        </Badge>
       </div>
       <h1 className="font-display text-2xl font-semibold tracking-tight text-figma-table md:text-3xl">
         {title}
       </h1>
-      <p className="max-w-2xl text-sm leading-relaxed text-figma-placeholder">
+      <p className="max-w-2xl text-sm leading-relaxed line-clamp-2 text-figma-placeholder">
         {description}
       </p>
     </div>
@@ -201,7 +192,6 @@ export function NewsView() {
         eyebrow="Inteligencia comercial"
         title="Análisis de mercado"
         description="Módulo orientado a la generación de oportunidades mediante el análisis de información relevante del sector. Detecta señales de compra, cambios organizativos y novedades que permiten anticipar el siguiente contacto."
-        accentLabel="Contexto estratégico"
       />
       <NewsToolbar highlightLabel="Recientes" />
       <NewsTable items={newsItemsMock} />
@@ -218,7 +208,6 @@ export function InterestingNewsView() {
         eyebrow="Funciones IA"
         title="Inteligencia comercial (Sin integrar)"
         description="Vista priorizada con señales de mayor impacto comercial. El sistema identifica automáticamente las noticias más relevantes para ordenar el outreach y decidir qué cuentas activar primero."
-        accentLabel="Prioridad alta"
       />
       <NewsToolbar highlightLabel="Estado de cliente" />
       <NewsTable items={interestingNews} emphasizeImpact />

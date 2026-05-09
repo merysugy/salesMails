@@ -18,6 +18,8 @@ export function SendEmailView() {
       .map(Number)
       .filter(Boolean) ?? [];
 
+  const plantillaParam = searchParams.get("plantilla");
+
   const [plantillas, setPlantillas] = useState<PlantillaEmailAPI[]>([]);
   const [plantillaId, setPlantillaId] = useState<number | null>(null);
   const [asunto, setAsunto] = useState("");
@@ -35,8 +37,22 @@ export function SendEmailView() {
   const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
-    getPlantillas().then(setPlantillas).catch(() => {});
+    getPlantillas()
+      .then((data) => {
+        setPlantillas(data);
+        if (plantillaParam) {
+          const id = Number(plantillaParam);
+          const match = data.find((p) => p.id === id);
+          if (match) {
+            setPlantillaId(match.id);
+            setAsunto(match.asunto);
+            setMensaje(match.cuerpo);
+          }
+        }
+      })
+      .catch(() => {});
     getClientes().then(setClientes).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectPlantilla = (id: number) => {

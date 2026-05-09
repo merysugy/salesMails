@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CopyPlus,
   Eye,
@@ -55,16 +55,6 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "salesmails.email-builder.templates.v1";
 
-const previewBackground: Record<EmailTemplate["variante"], string> = {
-  amber:
-    "bg-[radial-gradient(circle_at_top,_rgba(139,105,20,0.22),_transparent_55%),linear-gradient(180deg,#f4efe4_0%,#f8f6f0_100%)]",
-  sage:
-    "bg-[radial-gradient(circle_at_top,_rgba(61,107,79,0.24),_transparent_50%),linear-gradient(180deg,#eef3ee_0%,#f7faf7_100%)]",
-  stone:
-    "bg-[radial-gradient(circle_at_top,_rgba(115,112,106,0.20),_transparent_50%),linear-gradient(180deg,#f3f1ec_0%,#faf9f7_100%)]",
-  charcoal:
-    "bg-[radial-gradient(circle_at_top,_rgba(20,20,20,0.28),_transparent_45%),linear-gradient(180deg,#ece9e2_0%,#f7f4ee_100%)]",
-};
 
 const wizardSteps = [
   {
@@ -191,6 +181,23 @@ export function EmailBuilderWorkspace() {
   const [copied, setCopied] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStepId>("plantilla");
   const [saving, setSaving] = useState(false);
+
+  const savingStartRef = useRef(0);
+  const savingLabelRef = useRef("Guardando…");
+  const [showSaving, setShowSaving] = useState(false);
+
+  useEffect(() => {
+    if (saving) {
+      savingStartRef.current = Date.now();
+      setShowSaving(true);
+      return;
+    }
+    if (savingStartRef.current === 0) return;
+    const elapsed = Date.now() - savingStartRef.current;
+    const remaining = Math.max(0, 2000 - elapsed);
+    const timer = setTimeout(() => setShowSaving(false), remaining);
+    return () => clearTimeout(timer);
+  }, [saving]);
 
   // Carga clientes reales de la API
   useEffect(() => {
@@ -363,6 +370,7 @@ export function EmailBuilderWorkspace() {
       cuerpo: renderedHtml,
     };
 
+    savingLabelRef.current = nextStatus === "published" ? "Publicando…" : "Guardando…";
     setSaving(true);
     try {
       if (updatedLocal.apiId) {
@@ -459,14 +467,6 @@ export function EmailBuilderWorkspace() {
     }
   }
 
-  if (loadingTemplates) {
-    return (
-      <div className="py-12 text-center text-sm text-figma-placeholder">
-        Cargando plantillas…
-      </div>
-    );
-  }
-
   if (!activeTemplate) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -510,7 +510,7 @@ export function EmailBuilderWorkspace() {
               misma pantalla.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="lg"
@@ -549,7 +549,7 @@ export function EmailBuilderWorkspace() {
               onClick={() => saveTemplate()}
               className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
             >
-              {saving ? "Guardando…" : "Guardar"}
+              Guardar
             </Button>
             <Button
               type="button"
@@ -560,6 +560,11 @@ export function EmailBuilderWorkspace() {
             >
               Publicar
             </Button>
+            {showSaving && (
+              <div className="absolute inset-0 flex items-center rounded-md bg-background px-3">
+                <span className="text-sm text-figma-placeholder">{savingLabelRef.current}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -620,17 +625,7 @@ export function EmailBuilderWorkspace() {
                   {currentStepMeta.description}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-figma-placeholder">
-                <span className="rounded-full border border-border bg-white px-3 py-1.5">
-                  {activeTemplate.document.blocks.length} bloques
-                </span>
-                <span className="rounded-full border border-border bg-white px-3 py-1.5">
-                  {activeTemplate.versions.length} versiones
-                </span>
-                <span className="rounded-full border border-border bg-white px-3 py-1.5">
-                  Destinatarios {Math.max(selectedClientes.length, 1)}
-                </span>
-              </div>
+
             </div>
 
             <div className="mt-5 min-h-0">
@@ -655,12 +650,7 @@ export function EmailBuilderWorkspace() {
                               : "border-border/70 hover:border-figma-accent/40",
                           )}
                         >
-                          <div
-                            className={cn(
-                              "m-3 rounded-[1.25rem] p-4",
-                              previewBackground[template.variante],
-                            )}
-                          >
+                          <div className="m-3 rounded-[1.25rem] p-4">
                             <div className="rounded-[1rem] border border-white/60 bg-white/90 p-3 shadow-[0_10px_26px_rgba(20,20,20,0.08)]">
                               <div className="h-2 w-14 rounded-full bg-figma-table/20" />
                               <div className="mt-3 space-y-2">
@@ -731,27 +721,6 @@ export function EmailBuilderWorkspace() {
                             {activeTemplate.document.blocks.length} bloques
                           </span>
                         </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-border/80 bg-white py-0 shadow-none ring-0">
-                      <CardHeader className="border-b border-border/70 py-4">
-                        <CardTitle className="font-display text-base text-figma-table">
-                          Crear desde cero
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 p-4">
-                        <p className="text-sm leading-relaxed text-figma-placeholder">
-                          Crea una plantilla nueva y continua con el asistente paso a paso.
-                        </p>
-                        <Button
-                          type="button"
-                          onClick={createTemplate}
-                          className="h-10 w-full gap-2 bg-figma-table text-white hover:bg-figma-table/90"
-                        >
-                          <FolderPlus className="size-4" />
-                          Crear plantilla nueva
-                        </Button>
                       </CardContent>
                     </Card>
                   </div>
@@ -943,18 +912,9 @@ export function EmailBuilderWorkspace() {
             </div>
           </div>
 
-          {/* Navegación inferior */}
+          {/* Navegación inferior para cuando hagas una maqueta y no tengas que subir hasta la parte superior*/}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5 text-xs text-figma-table">
-                <LayoutTemplate className="mr-1 inline size-3.5" />
-                Flujo tipo formulario
-              </div>
-              <div className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5 text-xs text-figma-table">
-                <Mail className="mr-1 inline size-3.5" />
-                Sincronización con API activa
-              </div>
-            </div>
+            <div className="flex flex-wrap items-center gap-2"></div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -975,23 +935,6 @@ export function EmailBuilderWorkspace() {
                 <MoveRight className="size-4" />
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
-        <CardContent className="flex flex-wrap items-start justify-between gap-3 p-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-figma-placeholder" />
-              <p className="text-sm font-medium text-figma-table">
-                Flujo guiado por pasos
-              </p>
-            </div>
-            <p className="max-w-2xl text-xs leading-relaxed text-figma-placeholder">
-              Primero eliges plantilla, luego estructuras el email, despues editas
-              cada seccion, configuras la plantilla y terminas revisando el HTML.
-            </p>
           </div>
         </CardContent>
       </Card>

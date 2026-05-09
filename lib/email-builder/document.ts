@@ -263,12 +263,14 @@ export function createTemplateSeed(input: {
   seedKey?: string;
   status?: "draft" | "published";
   updatedAt?: string;
+  apiId?: number;
 }): EmailTemplate {
   const document = createDefaultDocument(input.titulo, input.seedKey);
   const updatedAt = input.updatedAt ?? new Date().toISOString();
 
   return {
     id: createId("template", input.seedKey),
+    apiId: input.apiId,
     titulo: input.titulo,
     descripcion: input.descripcion,
     categoria: input.categoria,

@@ -169,6 +169,7 @@ export type EmailTemplateVersion = {
 
 export type EmailTemplate = {
   id: string;
+  apiId?: number;
   titulo: string;
   descripcion: string;
   categoria: EmailTemplateCategory;

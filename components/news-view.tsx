@@ -216,7 +216,7 @@ export function InterestingNewsView() {
     <div className="flex min-h-full flex-col">
       <NewsHeader
         eyebrow="Funciones IA"
-        title="Inteligencia comercial"
+        title="Inteligencia comercial (Sin integrar)"
         description="Vista priorizada con señales de mayor impacto comercial. El sistema identifica automáticamente las noticias más relevantes para ordenar el outreach y decidir qué cuentas activar primero."
         accentLabel="Prioridad alta"
       />

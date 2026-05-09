@@ -16,7 +16,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { EmailBlockCanvas } from "@/components/email-editor/email-block-canvas";
 import {
@@ -42,7 +42,15 @@ import {
 } from "@/lib/email-builder/document";
 import { emailVariableDefinitions, renderEmailDocument } from "@/lib/email-builder/render";
 import type { EmailBlock, EmailTemplate, EmailViewport } from "@/lib/email-builder/types";
-import { emailTemplatesMock, getClientesByIds, getEmailRenderData } from "@/lib/mock-data";
+import type { EmailRenderData } from "@/lib/email-builder/types";
+import {
+  getPlantillas,
+  createPlantilla,
+  updatePlantilla,
+  deletePlantilla,
+  getClientes,
+  type ClienteAPI,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "salesmails.email-builder.templates.v1";
@@ -98,23 +106,51 @@ const wizardSteps = [
 
 type WizardStepId = (typeof wizardSteps)[number]["id"];
 
-function getInitialTemplates() {
-  if (typeof window === "undefined") {
-    return emailTemplatesMock;
-  }
+function mapClienteToRenderData(c: ClienteAPI): EmailRenderData {
+  return {
+    cliente: {
+      nombre: c.nombre,
+      empresa: c.empresa,
+      email: c.email ?? "",
+      localidad: c.ciudad ?? "",
+      ultimoContacto: "",
+    },
+    campana: {
+      nombre: "Campaña activa",
+      propuestaValor: "",
+      remitente: "",
+    },
+    empresa: {
+      nombre: "",
+      web: "",
+      telefono: "",
+    },
+  };
+}
 
+function defaultRenderData(): EmailRenderData {
+  return {
+    cliente: {
+      nombre: "Lead de ejemplo",
+      empresa: "Empresa ejemplo",
+      email: "ejemplo@empresa.com",
+      localidad: "Madrid",
+      ultimoContacto: "",
+    },
+    campana: { nombre: "Campaña activa", propuestaValor: "", remitente: "" },
+    empresa: { nombre: "", web: "", telefono: "" },
+  };
+}
+
+function readLocalTemplates(): EmailTemplate[] {
+  if (typeof window === "undefined") return [];
   try {
-    const storedTemplates = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!storedTemplates) {
-      return emailTemplatesMock;
-    }
-
-    const parsed = JSON.parse(storedTemplates) as EmailTemplate[];
-
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : emailTemplatesMock;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as EmailTemplate[];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return emailTemplatesMock;
+    return [];
   }
 }
 
@@ -136,225 +172,279 @@ function templateStatusClass(status: EmailTemplate["status"]) {
 }
 
 export function EmailBuilderWorkspace() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+
   const selectedClientIds = useMemo(() => {
     const value = searchParams.get("clientes");
-
-    if (!value) {
-      return [];
-    }
-
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    if (!value) return [];
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
   }, [searchParams]);
-  const selectedClientes = useMemo(
-    () => getClientesByIds(selectedClientIds),
-    [selectedClientIds],
-  );
-  const [templates, setTemplates] = useState<EmailTemplate[]>(() => getInitialTemplates());
-  const [activeTemplateId, setActiveTemplateId] = useState(
-    () => getInitialTemplates()[0]?.id ?? "",
-  );
-  const [selectedBlockId, setSelectedBlockId] = useState(
-    () => getInitialTemplates()[0]?.document.blocks[0]?.id ?? "",
-  );
+
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [apiClientes, setApiClientes] = useState<ClienteAPI[]>([]);
+  const [activeTemplateId, setActiveTemplateId] = useState("");
+  const [selectedBlockId, setSelectedBlockId] = useState("");
   const [viewport, setViewport] = useState<EmailViewport>("desktop");
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStepId>("plantilla");
+  const [saving, setSaving] = useState(false);
 
+  // Carga clientes reales de la API
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-  }, [templates]);
+    getClientes().then(setApiClientes).catch(() => {});
+  }, []);
+
+  // Carga plantillas de la API y las cruza con los documentos de localStorage
+  useEffect(() => {
+    setLoadingTemplates(true);
+    getPlantillas()
+      .then((apiPlantillas) => {
+        const local = readLocalTemplates();
+
+        const merged: EmailTemplate[] = apiPlantillas.map((p) => {
+          const existing = local.find((t) => t.apiId === p.id);
+          if (existing) {
+            return { ...existing, titulo: p.nombre };
+          }
+          return createTemplateSeed({
+            titulo: p.nombre,
+            descripcion: "",
+            categoria: "Primer contacto",
+            variante: "amber",
+            apiId: p.id,
+          });
+        });
+
+        // Borradores locales sin apiId
+        const localDrafts = local.filter((t) => !t.apiId);
+        const all = [...merged, ...localDrafts];
+
+        setTemplates(all);
+        const first = all[0];
+        if (first) {
+          setActiveTemplateId(first.id);
+          setSelectedBlockId(first.document.blocks[0]?.id ?? "");
+        }
+      })
+      .catch(() => {
+        // Si la API falla, usar solo borradores locales
+        const local = readLocalTemplates();
+        setTemplates(local);
+        const first = local[0];
+        if (first) {
+          setActiveTemplateId(first.id);
+          setSelectedBlockId(first.document.blocks[0]?.id ?? "");
+        }
+      })
+      .finally(() => setLoadingTemplates(false));
+  }, []);
+
+  // Persiste en localStorage cada vez que cambian los templates
+  useEffect(() => {
+    if (!loadingTemplates) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    }
+  }, [templates, loadingTemplates]);
+
+  const selectedClientes = useMemo(
+    () =>
+      selectedClientIds
+        .map((id) => apiClientes.find((c) => String(c.id) === id))
+        .filter((c): c is ClienteAPI => Boolean(c)),
+    [selectedClientIds, apiClientes],
+  );
 
   const activeTemplate =
-    templates.find((template) => template.id === activeTemplateId) ?? templates[0] ?? null;
+    templates.find((t) => t.id === activeTemplateId) ?? templates[0] ?? null;
+
   const resolvedSelectedBlockId =
-    activeTemplate?.document.blocks.some((block) => block.id === selectedBlockId)
+    activeTemplate?.document.blocks.some((b) => b.id === selectedBlockId)
       ? selectedBlockId
       : activeTemplate?.document.blocks[0]?.id ?? "";
+
   const activeBlock =
-    activeTemplate?.document.blocks.find(
-      (block) => block.id === resolvedSelectedBlockId,
-    ) ?? null;
+    activeTemplate?.document.blocks.find((b) => b.id === resolvedSelectedBlockId) ?? null;
+
   const renderData = useMemo(
-    () => getEmailRenderData(selectedClientes[0]),
+    () =>
+      selectedClientes[0]
+        ? mapClienteToRenderData(selectedClientes[0])
+        : defaultRenderData(),
     [selectedClientes],
   );
-  const previewHtml = useMemo(() => {
-    if (!activeTemplate) {
-      return "";
-    }
 
+  const previewHtml = useMemo(() => {
+    if (!activeTemplate) return "";
     return renderEmailDocument(activeTemplate.document, renderData);
   }, [activeTemplate, renderData]);
 
-  function updateTemplate(templateId: string, updater: (template: EmailTemplate) => EmailTemplate) {
-    setTemplates((currentTemplates) =>
-      currentTemplates.map((template) =>
-        template.id === templateId ? updater(template) : template,
-      ),
-    );
+  function updateTemplate(
+    templateId: string,
+    updater: (template: EmailTemplate) => EmailTemplate,
+  ) {
+    setTemplates((prev) => prev.map((t) => (t.id === templateId ? updater(t) : t)));
   }
 
   function updateActiveTemplate(updater: (template: EmailTemplate) => EmailTemplate) {
-    if (!activeTemplate) {
-      return;
-    }
-
+    if (!activeTemplate) return;
     updateTemplate(activeTemplate.id, updater);
   }
 
   function createTemplate() {
-    const nextTemplate = createTemplateSeed({
+    const next = createTemplateSeed({
       titulo: `Nueva plantilla ${templates.length + 1}`,
-      descripcion: "Borrador inicial para una secuencia personalizada.",
+      descripcion: "Borrador inicial.",
       categoria: "Primer contacto",
       variante: "amber",
     });
-
-    setTemplates((currentTemplates) => [nextTemplate, ...currentTemplates]);
-    setActiveTemplateId(nextTemplate.id);
-    setSelectedBlockId(nextTemplate.document.blocks[0]?.id ?? "");
+    setTemplates((prev) => [next, ...prev]);
+    setActiveTemplateId(next.id);
+    setSelectedBlockId(next.document.blocks[0]?.id ?? "");
   }
 
   function duplicateTemplate() {
-    if (!activeTemplate) {
-      return;
-    }
-
-    const nextTemplate = duplicateTemplateSeed(activeTemplate);
-
-    setTemplates((currentTemplates) => [nextTemplate, ...currentTemplates]);
-    setActiveTemplateId(nextTemplate.id);
-    setSelectedBlockId(nextTemplate.document.blocks[0]?.id ?? "");
+    if (!activeTemplate) return;
+    const next = duplicateTemplateSeed(activeTemplate);
+    // El duplicado es borrador local hasta que se guarde
+    next.apiId = undefined;
+    setTemplates((prev) => [next, ...prev]);
+    setActiveTemplateId(next.id);
+    setSelectedBlockId(next.document.blocks[0]?.id ?? "");
   }
 
-  function deleteTemplate() {
-    if (!activeTemplate || templates.length <= 1) {
-      return;
+  async function deleteTemplate() {
+    if (!activeTemplate || templates.length <= 1) return;
+    const confirmed = window.confirm(`Eliminar la plantilla "${activeTemplate.titulo}"?`);
+    if (!confirmed) return;
+
+    if (activeTemplate.apiId) {
+      try {
+        await deletePlantilla(activeTemplate.apiId);
+      } catch {
+        alert("Error al eliminar la plantilla del servidor.");
+        return;
+      }
     }
 
-    const confirmed = window.confirm(
-      `Eliminar la plantilla "${activeTemplate.titulo}"?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const remainingTemplates = templates.filter(
-      (template) => template.id !== activeTemplate.id,
-    );
-
-    setTemplates(remainingTemplates);
-    setActiveTemplateId(remainingTemplates[0]?.id ?? "");
-    setSelectedBlockId(remainingTemplates[0]?.document.blocks[0]?.id ?? "");
+    const remaining = templates.filter((t) => t.id !== activeTemplate.id);
+    setTemplates(remaining);
+    setActiveTemplateId(remaining[0]?.id ?? "");
+    setSelectedBlockId(remaining[0]?.document.blocks[0]?.id ?? "");
   }
 
-  function saveTemplate(nextStatus?: EmailTemplate["status"]) {
-    if (!activeTemplate) {
-      return;
+  async function saveTemplate(nextStatus?: EmailTemplate["status"]) {
+    if (!activeTemplate) return;
+
+    const nextUpdatedAt = new Date().toISOString();
+    const latestVersion = activeTemplate.versions[activeTemplate.versions.length - 1];
+    const versionChanged =
+      JSON.stringify(latestVersion?.document) !== JSON.stringify(activeTemplate.document);
+
+    const updatedLocal: EmailTemplate = {
+      ...activeTemplate,
+      status: nextStatus ?? activeTemplate.status,
+      updatedAt: nextUpdatedAt,
+      versions: versionChanged
+        ? [
+            ...activeTemplate.versions,
+            createTemplateVersion(activeTemplate.document, activeTemplate.versions.length + 1),
+          ]
+        : activeTemplate.versions,
+    };
+
+    // Sincroniza con la API
+    const renderedHtml = renderEmailDocument(activeTemplate.document, renderData);
+    const payload = {
+      nombre: updatedLocal.titulo,
+      asunto: updatedLocal.document.title,
+      cuerpo: renderedHtml,
+    };
+
+    setSaving(true);
+    try {
+      if (updatedLocal.apiId) {
+        await updatePlantilla(updatedLocal.apiId, payload);
+        setTemplates((prev) =>
+          prev.map((t) => (t.id === updatedLocal.id ? updatedLocal : t)),
+        );
+      } else {
+        const created = await createPlantilla(payload);
+        const withApiId = { ...updatedLocal, apiId: created.id };
+        setTemplates((prev) =>
+          prev.map((t) => (t.id === withApiId.id ? withApiId : t)),
+        );
+      }
+    } catch {
+      alert("Error al guardar la plantilla.");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    updateActiveTemplate((template) => {
-      const latestVersion = template.versions[template.versions.length - 1];
-      const nextUpdatedAt = new Date().toISOString();
-      const versionChanged =
-        JSON.stringify(latestVersion?.document) !== JSON.stringify(template.document);
-
-      return {
-        ...template,
-        status: nextStatus ?? template.status,
-        updatedAt: nextUpdatedAt,
-        versions: versionChanged
-          ? [
-              ...template.versions,
-              createTemplateVersion(template.document, template.versions.length + 1),
-            ]
-          : template.versions,
-      };
-    });
+  async function saveAndNavigateToSend() {
+    await saveTemplate("published");
+    const current = templates.find((t) => t.id === activeTemplateId) ?? activeTemplate;
+    const apiId = current?.apiId;
+    if (!apiId) return;
+    const clientesQs =
+      selectedClientIds.length > 0 ? `&clientes=${selectedClientIds.join(",")}` : "";
+    router.push(`/dashboard/correo/enviar?plantilla=${apiId}${clientesQs}`);
   }
 
   function updateActiveBlock(nextBlock: EmailBlock) {
-    if (!activeTemplate) {
-      return;
-    }
-
-    updateActiveTemplate((template) => ({
-      ...template,
-      document: updateBlockInDocument(template.document, nextBlock.id, () => nextBlock),
+    if (!activeTemplate) return;
+    updateActiveTemplate((t) => ({
+      ...t,
+      document: updateBlockInDocument(t.document, nextBlock.id, () => nextBlock),
       updatedAt: new Date().toISOString(),
     }));
   }
 
   function insertNewBlock(blockType: EmailBlock["type"]) {
-    if (!activeTemplate) {
-      return;
-    }
-
-    updateActiveTemplate((template) => {
-      const selectedIndex = template.document.blocks.findIndex(
-        (block) => block.id === resolvedSelectedBlockId,
+    if (!activeTemplate) return;
+    updateActiveTemplate((t) => {
+      const selectedIndex = t.document.blocks.findIndex(
+        (b) => b.id === resolvedSelectedBlockId,
       );
-      const result = insertBlock(template.document, blockType, selectedIndex);
+      const result = insertBlock(t.document, blockType, selectedIndex);
       setSelectedBlockId(result.insertedBlockId);
-
-      return {
-        ...template,
-        document: result.document,
-        updatedAt: new Date().toISOString(),
-      };
+      return { ...t, document: result.document, updatedAt: new Date().toISOString() };
     });
   }
 
   function duplicateCanvasBlock(blockId: string) {
-    if (!activeTemplate) {
-      return;
-    }
-
-    updateActiveTemplate((template) => {
-      const result = duplicateBlock(template.document, blockId);
-
-      if (result.duplicatedBlockId) {
-        setSelectedBlockId(result.duplicatedBlockId);
-      }
-
-      return {
-        ...template,
-        document: result.document,
-        updatedAt: new Date().toISOString(),
-      };
+    if (!activeTemplate) return;
+    updateActiveTemplate((t) => {
+      const result = duplicateBlock(t.document, blockId);
+      if (result.duplicatedBlockId) setSelectedBlockId(result.duplicatedBlockId);
+      return { ...t, document: result.document, updatedAt: new Date().toISOString() };
     });
   }
 
   function moveCanvasBlock(blockId: string, offset: -1 | 1) {
-    updateActiveTemplate((template) => ({
-      ...template,
-      document: moveBlockByOffset(template.document, blockId, offset),
+    updateActiveTemplate((t) => ({
+      ...t,
+      document: moveBlockByOffset(t.document, blockId, offset),
       updatedAt: new Date().toISOString(),
     }));
   }
 
   function dropCanvasBlock(sourceId: string, destinationId: string) {
-    updateActiveTemplate((template) => ({
-      ...template,
-      document: moveBlock(template.document, sourceId, destinationId),
+    updateActiveTemplate((t) => ({
+      ...t,
+      document: moveBlock(t.document, sourceId, destinationId),
       updatedAt: new Date().toISOString(),
     }));
   }
 
   function removeCanvasBlock(blockId: string) {
-    if (!activeTemplate || activeTemplate.document.blocks.length <= 1) {
-      return;
-    }
-
-    updateActiveTemplate((template) => ({
-      ...template,
-      document: removeBlock(template.document, blockId),
+    if (!activeTemplate || activeTemplate.document.blocks.length <= 1) return;
+    updateActiveTemplate((t) => ({
+      ...t,
+      document: removeBlock(t.document, blockId),
       updatedAt: new Date().toISOString(),
     }));
   }
@@ -369,26 +459,38 @@ export function EmailBuilderWorkspace() {
     }
   }
 
-  if (!activeTemplate) {
-    return null;
+  if (loadingTemplates) {
+    return (
+      <div className="py-12 text-center text-sm text-figma-placeholder">
+        Cargando plantillas…
+      </div>
+    );
   }
 
-  const currentStepIndex = wizardSteps.findIndex((step) => step.id === currentStep);
+  if (!activeTemplate) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-16 text-center">
+        <p className="text-sm text-figma-placeholder">No hay plantillas. Crea la primera.</p>
+        <Button type="button" onClick={createTemplate} className="gap-2">
+          <FolderPlus className="size-4" />
+          Crear plantilla
+        </Button>
+      </div>
+    );
+  }
+
+  const currentStepIndex = wizardSteps.findIndex((s) => s.id === currentStep);
   const currentStepMeta = wizardSteps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === wizardSteps.length - 1;
-  const selectedClientName = selectedClientes[0]?.nombre ?? "Lead de ejemplo";
+  const selectedClientName =
+    selectedClientes[0]?.nombre ?? "Lead de ejemplo";
 
   function goToNextStep() {
-    if (!isLastStep) {
-      setCurrentStep(wizardSteps[currentStepIndex + 1].id);
-    }
+    if (!isLastStep) setCurrentStep(wizardSteps[currentStepIndex + 1].id);
   }
-
   function goToPreviousStep() {
-    if (!isFirstStep) {
-      setCurrentStep(wizardSteps[currentStepIndex - 1].id);
-    }
+    if (!isFirstStep) setCurrentStep(wizardSteps[currentStepIndex - 1].id);
   }
 
   return (
@@ -443,14 +545,16 @@ export function EmailBuilderWorkspace() {
               type="button"
               size="lg"
               variant="outline"
+              disabled={saving}
               onClick={() => saveTemplate()}
               className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
             >
-              Guardar
+              {saving ? "Guardando…" : "Guardar"}
             </Button>
             <Button
               type="button"
               size="lg"
+              disabled={saving}
               onClick={() => saveTemplate("published")}
               className="h-9 gap-2 bg-figma-table px-3 text-sm font-medium text-white hover:bg-figma-table/90"
             >
@@ -462,12 +566,12 @@ export function EmailBuilderWorkspace() {
 
       <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
         <CardContent className="space-y-5 p-5">
+          {/* Pasos */}
           <div className="grid gap-3 lg:grid-cols-5">
             {wizardSteps.map((step, index) => {
               const isCurrent = step.id === currentStep;
               const isDone = index < currentStepIndex;
               const Icon = step.icon;
-
               return (
                 <button
                   key={step.id}
@@ -502,6 +606,7 @@ export function EmailBuilderWorkspace() {
             })}
           </div>
 
+          {/* Contenido del paso activo */}
           <div className="rounded-[1.6rem] border border-border/70 bg-[#fcfaf6] p-5">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-4">
               <div className="space-y-1">
@@ -529,12 +634,12 @@ export function EmailBuilderWorkspace() {
             </div>
 
             <div className="mt-5 min-h-0">
+              {/* ── Paso 1: Plantilla ── */}
               {currentStep === "plantilla" ? (
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {templates.map((template) => {
                       const isActive = template.id === activeTemplate.id;
-
                       return (
                         <button
                           key={template.id}
@@ -550,7 +655,12 @@ export function EmailBuilderWorkspace() {
                               : "border-border/70 hover:border-figma-accent/40",
                           )}
                         >
-                          <div className={cn("m-3 rounded-[1.25rem] p-4", previewBackground[template.variante])}>
+                          <div
+                            className={cn(
+                              "m-3 rounded-[1.25rem] p-4",
+                              previewBackground[template.variante],
+                            )}
+                          >
                             <div className="rounded-[1rem] border border-white/60 bg-white/90 p-3 shadow-[0_10px_26px_rgba(20,20,20,0.08)]">
                               <div className="h-2 w-14 rounded-full bg-figma-table/20" />
                               <div className="mt-3 space-y-2">
@@ -574,9 +684,11 @@ export function EmailBuilderWorkspace() {
                                 {templateStatusLabel(template.status)}
                               </span>
                             </div>
-                            <p className="text-xs leading-relaxed text-figma-placeholder">
-                              {template.descripcion}
-                            </p>
+                            {template.descripcion && (
+                              <p className="text-xs leading-relaxed text-figma-placeholder">
+                                {template.descripcion}
+                              </p>
+                            )}
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-figma-placeholder">
                               <span>{template.categoria}</span>
                               <span>{template.versions.length} versiones</span>
@@ -584,6 +696,11 @@ export function EmailBuilderWorkspace() {
                             <p className="text-[11px] text-figma-placeholder">
                               Actualizado {formatUpdatedAt(template.updatedAt)}
                             </p>
+                            {!template.apiId && (
+                              <p className="text-[10px] font-medium text-amber-600">
+                                Borrador local — guarda para sincronizar
+                              </p>
+                            )}
                           </div>
                         </button>
                       );
@@ -601,9 +718,11 @@ export function EmailBuilderWorkspace() {
                         <p className="text-lg font-medium text-figma-table">
                           {activeTemplate.titulo}
                         </p>
-                        <p className="text-sm leading-relaxed text-figma-placeholder">
-                          {activeTemplate.descripcion}
-                        </p>
+                        {activeTemplate.descripcion && (
+                          <p className="text-sm leading-relaxed text-figma-placeholder">
+                            {activeTemplate.descripcion}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-2 text-xs text-figma-placeholder">
                           <span className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5">
                             {activeTemplate.categoria}
@@ -623,8 +742,7 @@ export function EmailBuilderWorkspace() {
                       </CardHeader>
                       <CardContent className="space-y-3 p-4">
                         <p className="text-sm leading-relaxed text-figma-placeholder">
-                          Si no quieres partir de una base, crea una plantilla nueva y
-                          continua con el asistente paso a paso.
+                          Crea una plantilla nueva y continua con el asistente paso a paso.
                         </p>
                         <Button
                           type="button"
@@ -640,6 +758,7 @@ export function EmailBuilderWorkspace() {
                 </div>
               ) : null}
 
+              {/* ── Paso 2: Estructura ── */}
               {currentStep === "estructura" ? (
                 <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
                   <Card className="border-border/80 bg-white py-0 shadow-none ring-0">
@@ -673,7 +792,6 @@ export function EmailBuilderWorkspace() {
                       ))}
                     </CardContent>
                   </Card>
-
                   <EmailBlockCanvas
                     document={activeTemplate.document}
                     draggingBlockId={draggingBlockId}
@@ -690,6 +808,7 @@ export function EmailBuilderWorkspace() {
                 </div>
               ) : null}
 
+              {/* ── Paso 3: Detalle ── */}
               {currentStep === "bloque" ? (
                 <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
                   <Card className="border-border/80 bg-white py-0 shadow-none ring-0">
@@ -701,7 +820,6 @@ export function EmailBuilderWorkspace() {
                     <CardContent className="space-y-2 p-4">
                       {activeTemplate.document.blocks.map((block, index) => {
                         const isActive = block.id === resolvedSelectedBlockId;
-
                         return (
                           <button
                             key={block.id}
@@ -725,7 +843,6 @@ export function EmailBuilderWorkspace() {
                       })}
                     </CardContent>
                   </Card>
-
                   <EmailBlockInspectorCard
                     activeBlock={activeBlock}
                     onBlockChange={updateActiveBlock}
@@ -733,37 +850,32 @@ export function EmailBuilderWorkspace() {
                 </div>
               ) : null}
 
+              {/* ── Paso 4: Ajustes ── */}
               {currentStep === "ajustes" ? (
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
                   <div className="space-y-4">
                     <EmailTemplateSettingsCard
                       activeTemplate={activeTemplate}
                       onDocumentMetaChange={(patch) =>
-                        updateActiveTemplate((template) => ({
-                          ...template,
-                          document: {
-                            ...template.document,
-                            ...patch,
-                          },
+                        updateActiveTemplate((t) => ({
+                          ...t,
+                          document: { ...t.document, ...patch },
                           updatedAt: new Date().toISOString(),
                         }))
                       }
                       onTemplateMetaChange={(patch) =>
-                        updateActiveTemplate((template) => ({
-                          ...template,
+                        updateActiveTemplate((t) => ({
+                          ...t,
                           ...patch,
                           updatedAt: new Date().toISOString(),
                         }))
                       }
                       onThemeChange={(patch) =>
-                        updateActiveTemplate((template) => ({
-                          ...template,
+                        updateActiveTemplate((t) => ({
+                          ...t,
                           document: {
-                            ...template.document,
-                            theme: {
-                              ...template.document.theme,
-                              ...patch,
-                            },
+                            ...t.document,
+                            theme: { ...t.document.theme, ...patch },
                           },
                           updatedAt: new Date().toISOString(),
                         }))
@@ -787,20 +899,20 @@ export function EmailBuilderWorkspace() {
                               prepara para {selectedClientes.length} destinatarios.
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {selectedClientes.map((cliente) => (
+                              {selectedClientes.map((c) => (
                                 <span
-                                  key={cliente.id}
+                                  key={c.id}
                                   className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5 text-xs text-figma-table"
                                 >
-                                  {cliente.nombre}
+                                  {c.nombre}
                                 </span>
                               ))}
                             </div>
                           </>
                         ) : (
                           <p className="text-sm text-figma-placeholder">
-                            No llegaron clientes por query string. El editor usa datos
-                            mock para mantener la previsualizacion funcional.
+                            No hay clientes seleccionados. La preview usa datos de ejemplo.
+                            Selecciona clientes desde el dashboard antes de abrir el editor.
                           </p>
                         )}
                       </CardContent>
@@ -814,6 +926,7 @@ export function EmailBuilderWorkspace() {
                 </div>
               ) : null}
 
+              {/* ── Paso 5: Preview ── */}
               {currentStep === "preview" ? (
                 <EmailPreviewPane
                   copied={copied}
@@ -821,13 +934,16 @@ export function EmailBuilderWorkspace() {
                   selectedClientName={selectedClientName}
                   selectedRecipients={Math.max(selectedClientes.length, 1)}
                   viewport={viewport}
+                  saving={saving}
                   onCopyHtml={copyHtml}
                   onViewportChange={setViewport}
+                  onSaveAndSend={saveAndNavigateToSend}
                 />
               ) : null}
             </div>
           </div>
 
+          {/* Navegación inferior */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
             <div className="flex flex-wrap items-center gap-2">
               <div className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5 text-xs text-figma-table">
@@ -836,7 +952,7 @@ export function EmailBuilderWorkspace() {
               </div>
               <div className="rounded-full border border-border bg-[#fbfaf7] px-3 py-1.5 text-xs text-figma-table">
                 <Mail className="mr-1 inline size-3.5" />
-                Persistencia local activa
+                Sincronización con API activa
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">

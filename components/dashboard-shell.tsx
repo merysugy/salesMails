@@ -73,6 +73,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       .catch(() => {
         setUserName("Usuario");
       });
+
+    const onProfileUpdated = (e: Event) => {
+      const { first_name, email } = (e as CustomEvent).detail;
+      setUserName(first_name || email);
+    };
+    window.addEventListener("user-profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("user-profile-updated", onProfileUpdated);
   }, []);
 
   return (

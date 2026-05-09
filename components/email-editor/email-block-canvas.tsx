@@ -397,14 +397,8 @@ export function EmailBlockCanvas({
 }: EmailBlockCanvasProps) {
   return (
     <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
-      <CardHeader className="border-b border-border/70 bg-[#faf6ee] py-4">
+      <CardHeader className="border-b border-border/70 py-4">
         <div className="space-y-1">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-figma-placeholder">
-            Canvas
-          </p>
-          <CardTitle className="font-display text-lg text-figma-table">
-            Maquetador visual de la plantilla
-          </CardTitle>
           <p className="text-xs text-figma-placeholder">
             {document.blocks.length} bloques activos. Preview configurada para {selectedRecipients} destinatarios.
           </p>

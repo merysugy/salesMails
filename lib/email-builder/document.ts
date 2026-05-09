@@ -28,46 +28,14 @@ const defaultTheme = {
 } as const;
 
 export const blockDefinitions: BlockDefinition[] = [
-  {
-    type: "hero",
-    title: "Hero",
-    description: "Bloque de apertura con titular, contexto y CTA principal.",
-  },
-  {
-    type: "texto",
-    title: "Texto",
-    description: "Contenido descriptivo para explicar la propuesta.",
-  },
-  {
-    type: "imagen",
-    title: "Imagen",
-    description: "Imagen de apoyo con caption opcional.",
-  },
-  {
-    type: "cta",
-    title: "CTA",
-    description: "Llamada a la acción con botón destacado.",
-  },
-  {
-    type: "separador",
-    title: "Separador",
-    description: "Divide visualmente secciones del email.",
-  },
-  {
-    type: "dosColumnas",
-    title: "Dos columnas",
-    description: "Comparativa o beneficios lado a lado.",
-  },
-  {
-    type: "firma",
-    title: "Firma",
-    description: "Cierre comercial y datos del remitente.",
-  },
-  {
-    type: "footer",
-    title: "Footer",
-    description: "Pie legal y datos corporativos.",
-  },
+  { type: "hero", title: "Hero" },
+  { type: "texto", title: "Texto" },
+  { type: "imagen", title: "Imagen" },
+  { type: "cta", title: "CTA" },
+  { type: "separador", title: "Separador" },
+  { type: "dosColumnas", title: "Dos columnas" },
+  { type: "firma", title: "Firma" },
+  { type: "footer", title: "Footer" },
 ];
 
 function createId(prefix: string, seed?: string) {

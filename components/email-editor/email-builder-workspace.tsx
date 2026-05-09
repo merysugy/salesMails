@@ -467,18 +467,6 @@ export function EmailBuilderWorkspace() {
     }
   }
 
-  if (!activeTemplate) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-16 text-center">
-        <p className="text-sm text-figma-placeholder">No hay plantillas. Crea la primera.</p>
-        <Button type="button" onClick={createTemplate} className="gap-2">
-          <FolderPlus className="size-4" />
-          Crear plantilla
-        </Button>
-      </div>
-    );
-  }
-
   const currentStepIndex = wizardSteps.findIndex((s) => s.id === currentStep);
   const currentStepMeta = wizardSteps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
@@ -492,6 +480,8 @@ export function EmailBuilderWorkspace() {
   function goToPreviousStep() {
     if (!isFirstStep) setCurrentStep(wizardSteps[currentStepIndex - 1].id);
   }
+
+  const headerActionsDisabled = loadingTemplates || !activeTemplate;
 
   return (
     <div className="flex min-w-0 flex-col gap-6 pb-2">
@@ -524,6 +514,7 @@ export function EmailBuilderWorkspace() {
               type="button"
               size="lg"
               variant="outline"
+              disabled={headerActionsDisabled}
               onClick={duplicateTemplate}
               className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
             >
@@ -535,7 +526,7 @@ export function EmailBuilderWorkspace() {
               size="lg"
               variant="outline"
               onClick={deleteTemplate}
-              disabled={templates.length <= 1}
+              disabled={headerActionsDisabled || templates.length <= 1}
               className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
             >
               <Trash2 className="size-3.5" />
@@ -545,7 +536,7 @@ export function EmailBuilderWorkspace() {
               type="button"
               size="lg"
               variant="outline"
-              disabled={saving}
+              disabled={headerActionsDisabled || saving}
               onClick={() => saveTemplate()}
               className="h-9 gap-2 border-border bg-transparent px-3 text-sm font-medium text-figma-table hover:bg-muted"
             >
@@ -554,7 +545,7 @@ export function EmailBuilderWorkspace() {
             <Button
               type="button"
               size="lg"
-              disabled={saving}
+              disabled={headerActionsDisabled || saving}
               onClick={() => saveTemplate("published")}
               className="h-9 gap-2 bg-figma-table px-3 text-sm font-medium text-white hover:bg-figma-table/90"
             >
@@ -569,7 +560,21 @@ export function EmailBuilderWorkspace() {
         </div>
       </div>
 
-      <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
+      {loadingTemplates ? (
+        <div className="py-12 text-center text-sm text-figma-placeholder">
+          Cargando plantillas…
+        </div>
+      ) : !activeTemplate ? (
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <p className="text-sm text-figma-placeholder">No hay plantillas. Crea la primera.</p>
+          <Button type="button" onClick={createTemplate} className="gap-2">
+            <FolderPlus className="size-4" />
+            Crear plantilla
+          </Button>
+        </div>
+      ) : null}
+
+      {!loadingTemplates && activeTemplate && <Card className="border-border/80 bg-card py-0 shadow-none ring-0">
         <CardContent className="space-y-5 p-5">
           {/* Pasos */}
           <div className="grid gap-3 lg:grid-cols-5">
@@ -679,10 +684,6 @@ export function EmailBuilderWorkspace() {
                                 {template.descripcion}
                               </p>
                             )}
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-figma-placeholder">
-                              <span>{template.categoria}</span>
-                              <span>{template.versions.length} versiones</span>
-                            </div>
                             <p className="text-[11px] text-figma-placeholder">
                               Actualizado {formatUpdatedAt(template.updatedAt)}
                             </p>
@@ -731,11 +732,6 @@ export function EmailBuilderWorkspace() {
               {currentStep === "estructura" ? (
                 <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
                   <Card className="border-border/80 bg-white py-0 shadow-none ring-0">
-                    <CardHeader className="border-b border-border/70 py-4">
-                      <CardTitle className="font-display text-base text-figma-table">
-                        Bloques disponibles
-                      </CardTitle>
-                    </CardHeader>
                     <CardContent className="space-y-2 p-4">
                       {blockDefinitions.map((block) => (
                         <button
@@ -748,9 +744,6 @@ export function EmailBuilderWorkspace() {
                             <div>
                               <p className="text-sm font-medium text-figma-table">
                                 {block.title}
-                              </p>
-                              <p className="mt-1 text-xs leading-relaxed text-figma-placeholder">
-                                {block.description}
                               </p>
                             </div>
                             <span className="rounded-full border border-border bg-white p-2 text-figma-table">
@@ -937,7 +930,7 @@ export function EmailBuilderWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

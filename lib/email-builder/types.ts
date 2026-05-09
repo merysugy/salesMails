@@ -204,5 +204,4 @@ export type EmailRenderData = {
 export type BlockDefinition = {
   type: EmailBlockType;
   title: string;
-  description: string;
 };

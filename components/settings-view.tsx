@@ -68,6 +68,7 @@ export function SettingsView() {
       setUser(updated);
       setForm(toForm(updated));
       setSaved(true);
+      window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: updated }));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error al guardar los cambios.");
     } finally {
